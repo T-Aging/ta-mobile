@@ -1,38 +1,58 @@
-package com.example.tam.modules.order.entity;
-
+package com.example.tam.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
-import com.example.tam.modules.user.entity.User;
-
 
 @Entity
-@Table(name = "orders")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
+@Table(name = "orders", indexes = {
+    @Index(name = "idx_user_id", columnList = "user_id"),
+    @Index(name = "idx_order_number", columnList = "order_number"),
+    @Index(name = "idx_created_at", columnList = "created_at")
+})
+@EntityListeners(AuditingEntityListener.class)
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Order {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
-@Id
-@GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long id;
+    @Column(name = "order_number", unique = true, nullable = false, length = 50)
+    private String orderNumber;
 
+    @Column(name = "items_json", columnDefinition = "TEXT", nullable = false)
+    private String itemsJson;
 
-@ManyToOne(fetch = FetchType.LAZY)
-@JoinColumn(name = "user_id")
-private User user;
+    @Column(name = "total_price", nullable = false)
+    private Integer totalPrice;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status = OrderStatus.PENDING;
 
-private String orderNumber; // 영수증 번호
-private Integer totalPrice;
+    @Column(name = "kiosk_id")
+    private String kioskId;
 
+    @Column(name = "receipt_url")
+    private String receiptUrl;
 
-private LocalDateTime createdAt;
+    @CreatedDate
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
-@PrePersist
-public void prePersist() {
-createdAt = LocalDateTime.now();
-}
+    public enum OrderStatus {
+        PENDING, CONFIRMED, PREPARING, READY, COMPLETED, CANCELLED
+    }
 }
