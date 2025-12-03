@@ -1,9 +1,9 @@
 package com.example.tam.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class OrderDto {
     
@@ -11,67 +11,70 @@ public class OrderDto {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Builder
     public static class CreateRequest {
-        @NotBlank(message = "주문 항목은 필수입니다")
-        private String itemsJson;
-        
-        @NotNull(message = "총 금액은 필수입니다")
-        private Integer totalPrice;
-        
-        private String kioskId;
+        private Integer storeId;
+        private List<OrderItem> items;
     }
 
     @Getter
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class CreateFromCustomRequest {
-        @NotNull(message = "커스텀 메뉴 ID는 필수입니다")
-        private Long customMenuId;
-        
-        @NotNull(message = "수량은 필수입니다")
+    @Builder
+    public static class OrderItem {
+        private Integer menuId;
         private Integer quantity;
+        private List<OptionDetail> options;
     }
 
     @Getter
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Builder
+    public static class OptionDetail {
+        private Integer optionId;
+        private Integer extraNum;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class DateRangeRequest {
-        @NotBlank(message = "시작일은 필수입니다")
-        private String fromDate;
-        
-        @NotBlank(message = "종료일은 필수입니다")
-        private String toDate;
+        private String fromDate; // "yyyy-MM-dd"
+        private String toDate;   // "yyyy-MM-dd"
     }
 
     @Getter
     @Setter
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
+    @Builder
     public static class Response {
-        private Long id;
-        private String orderNumber;
-        private String itemsJson;
+        private Integer orderId;
+        private Integer userId;
+        private Integer storeId;
+        private String storeName;
+        private LocalDateTime orderDatetime;
+        private Integer waitingNum;
         private Integer totalPrice;
-        private String status;
-        private String kioskId;
-        private String receiptUrl;
-        private LocalDateTime createdAt;
-        private LocalDateTime completedAt;
+        private String orderStatus;
+        private List<OrderItemDetail> items;
     }
 
     @Getter
     @Setter
-    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class SummaryResponse {
-        private Long id;
-        private String orderNumber;
-        private Integer totalPrice;
-        private String status;
-        private LocalDateTime createdAt;
+    @Builder
+    public static class OrderItemDetail {
+        private Integer menuId;
+        private String menuName;
+        private Integer quantity;
+        private Integer price;
+        private List<OptionDetail> options;
     }
 }
