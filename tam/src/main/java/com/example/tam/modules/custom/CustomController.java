@@ -10,62 +10,56 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/t-age/users/{userid}/custom")
+@RequestMapping("/t-age/users/{userid}/custom-menus")
 @RequiredArgsConstructor
 @Tag(name = "커스텀 메뉴", description = "커스텀 메뉴 관리 API")
 public class CustomController {
 
     private final CustomService customService;
 
-    @Operation(summary = "커스텀 주문 조회 / 최근 주문 조회")
-    @GetMapping("/gen")
+    @Operation(summary = "커스텀 메뉴 목록 조회")
+    @GetMapping
     public ResponseEntity<ApiResponse<?>> getCustomMenus(@PathVariable Integer userid) {
         var menus = customService.getAllCustomMenus(userid);
         return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 조회 성공", menus));
     }
 
-    @Operation(summary = "커스텀 주문 생성 / 최근 주문 생성")
-    @PostMapping("/gen")
+    @Operation(summary = "커스텀 메뉴 상세 조회")
+    @GetMapping("/{customId}")
+    public ResponseEntity<ApiResponse<?>> getCustomMenuDetail(
+            @PathVariable Integer userid,
+            @PathVariable Integer customId) {
+        var menu = customService.getCustomMenuDetail(userid, customId);
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 상세 조회 성공", menu));
+    }
+
+    @Operation(summary = "커스텀 메뉴 생성")
+    @PostMapping
     public ResponseEntity<ApiResponse<CustomMenuDto.Response>> createCustomMenu(
             @PathVariable Integer userid,
             @Valid @RequestBody CustomMenuDto.CreateRequest request) {
-        
         CustomMenuDto.Response response = customService.createCustomMenu(userid, request);
         return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 생성 성공", response));
     }
 
     @Operation(summary = "커스텀 메뉴 수정")
-    @PutMapping("/update")
+    @PutMapping("/{customId}")
     public ResponseEntity<ApiResponse<CustomMenuDto.Response>> updateCustomMenu(
             @PathVariable Integer userid,
+            @PathVariable Integer customId,
             @Valid @RequestBody CustomMenuDto.UpdateRequest request) {
-        
+        // URL의 customId를 request에 주입하거나 서비스에서 검증 필요
+        request.setCustomId(customId); 
         CustomMenuDto.Response response = customService.updateCustomMenu(userid, request);
         return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 수정 성공", response));
     }
 
     @Operation(summary = "커스텀 메뉴 삭제")
-    @DeleteMapping("/delete")
+    @DeleteMapping("/{customId}")
     public ResponseEntity<ApiResponse<Void>> deleteCustomMenu(
             @PathVariable Integer userid,
-            @RequestParam Integer customId) {
-        
+            @PathVariable Integer customId) {
         customService.deleteCustomMenu(userid, customId);
         return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 삭제 성공", null));
-    }
-
-    @Operation(summary = "커스텀 메뉴 조회 / 커스텀 상세 보기(최근 생성 순)")
-    @GetMapping("/search")
-    public ResponseEntity<ApiResponse<?>> searchCustomMenu(
-            @PathVariable Integer userid,
-            @RequestParam(required = false) Integer customId) {
-        
-        if (customId != null) {
-            var menu = customService.getCustomMenuDetail(userid, customId);
-            return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 상세 조회 성공", menu));
-        }
-        
-        var menus = customService.getAllCustomMenus(userid);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 목록 조회 성공", menus));
     }
 }
