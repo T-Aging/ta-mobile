@@ -1,5 +1,6 @@
-package com.example.tam.entity;
+package com.example.tam.modules.order.entity;
 
+import com.example.tam.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -19,12 +20,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Order {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "order_number", unique = true, nullable = false, length = 50)
     private String orderNumber;
