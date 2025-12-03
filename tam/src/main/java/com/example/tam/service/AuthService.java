@@ -1,14 +1,9 @@
-package com.example.tam.service;
+package com.example.tam.modules.auth;
 
+import com.example.tam.common.entity.User;
+import com.example.tam.common.entity.Kakao;
 import com.example.tam.dto.AuthDto;
-import com.example.tam.entity.User;
-import com.example.tam.exception.KakaoAuthException;
-import com.example.tam.exception.UnauthorizedException;
-import com.example.tam.repository.UserRepository;
-import com.example.tam.security.JwtUtil;
-import com.example.tam.service.kakao.KakaoApiService;
-import com.example.tam.service.kakao.KakaoOAuthService;
-import com.example.tam.service.kakao.KakaoUserInfo;
+import com.example.tam.modules.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,135 +16,52 @@ import java.time.LocalDateTime;
 public class AuthService {
     
     private final UserRepository userRepository;
-    private final KakaoApiService kakaoApiService;
-    private final KakaoOAuthService kakaoOAuthService;
-    private final JwtUtil jwtUtil;
+    private final KakaoRepository kakaoRepository;
 
     @Transactional
-    public AuthDto.LoginResponse loginWithKakaoCode(String code) {
-        try {
-            KakaoOAuthService.KakaoTokenResponse tokenResponse = 
-                kakaoOAuthService.getAccessToken(code);
-            
-            KakaoUserInfo kakaoUserInfo = 
-                kakaoApiService.getUserInfo(tokenResponse.getAccessToken());
-            
-            return processKakaoLogin(kakaoUserInfo);
-            
-        } catch (KakaoAuthException e) {
-            log.error("카카오 인증 실패", e);
-            throw e;
-        } catch (Exception e) {
-            log.error("로그인 처리 중 오류 발생", e);
-            throw new RuntimeException("로그인 처리에 실패했습니다", e);
-        }
-    }
+    public AuthDto.LoginResponse loginWithKakao(String kakaoId, String accessToken) {
+        // Kakao 정보 조회 또는 생성
+        Kakao kakao = kakaoRepository.findById(kakaoId)
+                .orElseGet(() -> {
+                    // 신규 사용자 생성
+                    User newUser = User.builder()
+                            .username("사용자" + kakaoId.substring(0, 4))
+                            .build();
+                    User savedUser = userRepository.save(newUser);
 
-    @Transactional
-    public AuthDto.LoginResponse loginWithKakao(AuthDto.KakaoLoginRequest request) {
-        try {
-            KakaoUserInfo kakaoUserInfo = 
-                kakaoApiService.getUserInfo(request.getAccessToken());
-            
-            return processKakaoLogin(kakaoUserInfo);
-            
-        } catch (KakaoAuthException e) {
-            log.error("카카오 인증 실패", e);
-            throw e;
-        } catch (Exception e) {
-            log.error("로그인 처리 중 오류 발생", e);
-            throw new RuntimeException("로그인 처리에 실패했습니다", e);
-        }
-    }
+                    Kakao newKakao = Kakao.builder()
+                            .kakaoId(kakaoId)
+                            .userId(savedUser.getUserId())
+                            .accessToken(accessToken)
+                            .lastAccessDate(LocalDateTime.now())
+                            .build();
+                    return kakaoRepository.save(newKakao);
+                });
 
-    private AuthDto.LoginResponse processKakaoLogin(KakaoUserInfo kakaoUserInfo) {
-        if (kakaoUserInfo == null || kakaoUserInfo.getId() == null) {
-            throw new KakaoAuthException("카카오 사용자 정보를 가져올 수 없습니다");
-        }
-        
-        String kakaoId = String.valueOf(kakaoUserInfo.getId());
-        
-        User user = userRepository.findByKakaoId(kakaoId)
-                .orElseGet(() -> createNewUser(kakaoUserInfo));
-        
-        user.setLastLoginAt(LocalDateTime.now());
-        userRepository.save(user);
-        
-        String accessToken = jwtUtil.generateToken(user.getId(), user.getUsername());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
-        
-        log.info("사용자 로그인 성공 - userId: {}, kakaoId: {}", user.getId(), kakaoId);
-        
+        // 기존 사용자면 토큰 업데이트
+        kakao.setAccessToken(accessToken);
+        kakao.setLastAccessDate(LocalDateTime.now());
+        kakaoRepository.save(kakao);
+
+        User user = userRepository.findById(kakao.getUserId())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+
+        log.info("카카오 로그인 성공 - userId: {}, kakaoId: {}", user.getUserId(), kakaoId);
+
         return AuthDto.LoginResponse.builder()
-                .userId(user.getId())
+                .userId(Long.valueOf(user.getUserId()))
                 .username(user.getUsername())
-                .email(user.getEmail())
+                .email(null) // User 엔티티에 email 필드 없음
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
+                .refreshToken(null) // 필요시 구현
                 .tokenType("Bearer")
-                .expiresIn(jwtUtil.getExpirationTime())
+                .expiresIn(3600L)
                 .build();
     }
 
-    private User createNewUser(KakaoUserInfo kakaoUserInfo) {
-        String kakaoId = String.valueOf(kakaoUserInfo.getId());
-        String nickname = kakaoUserInfo.getProperties() != null 
-                ? kakaoUserInfo.getProperties().getNickname() 
-                : "사용자" + kakaoId.substring(0, 4);
-        String email = kakaoUserInfo.getKakaoAccount() != null 
-                ? kakaoUserInfo.getKakaoAccount().getEmail() 
-                : null;
-        String profileImage = kakaoUserInfo.getProperties() != null 
-                ? kakaoUserInfo.getProperties().getProfileImage() 
-                : null;
-        
-        User newUser = User.builder()
-                .kakaoId(kakaoId)
-                .username(nickname)
-                .email(email)
-                .profileImageUrl(profileImage)
-                .role(User.UserRole.USER)
-                .status(User.UserStatus.ACTIVE)
-                .build();
-        
-        User savedUser = userRepository.save(newUser);
-        log.info("신규 회원 가입 완료 - userId: {}, kakaoId: {}", savedUser.getId(), kakaoId);
-        
-        return savedUser;
-    }
-
-    @Transactional(readOnly = true)
-    public AuthDto.LoginResponse refreshToken(AuthDto.TokenRefreshRequest request) {
-        try {
-            if (!jwtUtil.validateToken(request.getRefreshToken())) {
-                throw new UnauthorizedException("유효하지 않은 리프레시 토큰입니다");
-            }
-            
-            Long userId = jwtUtil.getUserIdFromToken(request.getRefreshToken());
-            
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new UnauthorizedException("사용자를 찾을 수 없습니다"));
-            
-            String newAccessToken = jwtUtil.generateToken(user.getId(), user.getUsername());
-            String newRefreshToken = jwtUtil.generateRefreshToken(user.getId());
-            
-            return AuthDto.LoginResponse.builder()
-                    .userId(user.getId())
-                    .username(user.getUsername())
-                    .email(user.getEmail())
-                    .accessToken(newAccessToken)
-                    .refreshToken(newRefreshToken)
-                    .tokenType("Bearer")
-                    .expiresIn(jwtUtil.getExpirationTime())
-                    .build();
-                    
-        } catch (Exception e) {
-            log.error("토큰 재발급 실패", e);
-            throw new UnauthorizedException("토큰 재발급에 실패했습니다");
-        }
-    }
-
-    public void logout(Long userId) {
-        log.info("사용자 로그아웃 - userId: {}", userId);
+    @Transactional
+    public void logout(Integer userId) {
+        log.info("로그아웃 - userId: {}", userId);
+        // 필요시 토큰 무효화 로직 추가
     }
 }
