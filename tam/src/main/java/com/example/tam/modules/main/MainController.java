@@ -1,50 +1,51 @@
 package com.example.tam.modules.main;
 
-import com.example.tam.common.QrService;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
+import com.example.tam.dto.ApiResponse;
+import com.example.tam.modules.custom.CustomMenuService;
+import com.example.tam.modules.order.OrderService;
+import com.example.tam.modules.user.UserRepository;
+import com.example.tam.service.QrCodeService;
 import lombok.RequiredArgsConstructor;
-import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/t-age")
+@RequestMapping("/t-age/main")
 @RequiredArgsConstructor
-public class TAgeMainController {
+public class MainController {
 
-    private final QrService qrService;
+    private final QrCodeService qrCodeService;
+    private final CustomMenuService customMenuService;
+    private final OrderService orderService;
+    private final UserRepository userRepository;
 
-    // --- 메인 화면 ---
-
-    @GetMapping("/main/qr")
-    public ResponseEntity<?> getMainQr() {
-        // 메인 화면용 공통 QR 혹은 로그인 유저의 QR
-        return ResponseEntity.ok(Map.of("qrData", "main-qr-code-data"));
+    @GetMapping("/qr")
+    public ResponseEntity<ApiResponse<QrCodeService.QrCodeResponse>> getMainQr(Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        QrCodeService.QrCodeResponse qrCode = qrCodeService.generateUserQrCode(userId);
+        return ResponseEntity.ok(ApiResponse.success(qrCode));
     }
 
-    @GetMapping("/main/custom")
-    public ResponseEntity<?> getMainCustom() {
-        return ResponseEntity.ok("메인 화면 추천 커스텀 메뉴 데이터");
+    @GetMapping("/custom")
+    public ResponseEntity<ApiResponse<?>> getMainCustom(Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        var customMenus = customMenuService.getFavoriteMenus(userId);
+        return ResponseEntity.ok(ApiResponse.success("메인 화면 추천 커스텀 메뉴", customMenus));
     }
 
-    @GetMapping("/main/order")
-    public ResponseEntity<?> getMainOrder() {
-        return ResponseEntity.ok("메인 화면 현재 진행중인 주문 정보");
+    @GetMapping("/order")
+    public ResponseEntity<ApiResponse<?>> getMainOrder(Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        var orders = orderService.getAllOrders(userId);
+        return ResponseEntity.ok(ApiResponse.success("현재 진행중인 주문", orders));
     }
 
-    @GetMapping("/main/user")
-    public ResponseEntity<?> getMainUser() {
-        return ResponseEntity.ok("메인 화면 유저 요약 정보");
-    }
-
-    // --- 키오스크 QR (회원 QR 조회) ---
-    @GetMapping("/users/{userid}/qr")
-    public ResponseEntity<?> getUserQr(@PathVariable Long userid) {
-        try {
-            // 유저 ID를 기반으로 QR 생성
-            String qrImage = qrService.generateQrCode("User:" + userid, 200, 200);
-            return ResponseEntity.ok(Map.of("qrImage", "data:image/png;base64," + qrImage));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
+    @GetMapping("/user")
+    public ResponseEntity<ApiResponse<?>> getMainUser(Authentication auth) {
+        Long userId = (Long) auth.getPrincipal();
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+        return ResponseEntity.ok(ApiResponse.success("사용자 요약 정보", user));
     }
 }
