@@ -1,68 +1,99 @@
 package com.example.tam.modules.custom;
 
-import com.example.tam.modules.custom.entity.CustomMenu;
-import com.example.tam.modules.user.UserRepository; // Repository 필요
-import com.example.tam.modules.user.entity.User;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
+import com.example.tam.dto.ApiResponse;
+import com.example.tam.dto.CustomMenuDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import java.util.List;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/t-age/users/{userid}/custom")
 @RequiredArgsConstructor
+@Tag(name = "커스텀 메뉴", description = "커스텀 메뉴 관리 API")
 public class CustomMenuController {
 
-    private final CustomMenuRepository customMenuRepository;
-    private final UserRepository userRepository;
+    private final CustomMenuService customMenuService;
 
-    // 커스텀 주문 조회 / 최근 주문 조회 (요청 파라미터로 구분 예시)
+    @Operation(summary = "커스텀 메뉴 조회")
     @GetMapping("/gen")
-    public ResponseEntity<?> getCustomOrRecent(@PathVariable Long userid, @RequestParam(required = false) String type) {
+    public ResponseEntity<ApiResponse<?>> getCustomMenus(
+            @PathVariable Long userid,
+            @RequestParam(required = false) String type,
+            Authentication auth) {
+        
+        validateUser(userid, auth);
+        
         if ("recent".equals(type)) {
-            return ResponseEntity.ok(customMenuRepository.findByUserIdAndIsRecentTrue(userid));
+            var menus = customMenuService.getRecentMenus(userid);
+            return ResponseEntity.ok(ApiResponse.success("최근 주문 조회 성공", menus));
+        } else if ("favorite".equals(type)) {
+            var menus = customMenuService.getFavoriteMenus(userid);
+            return ResponseEntity.ok(ApiResponse.success("즐겨찾기 메뉴 조회 성공", menus));
         }
-        return ResponseEntity.ok(customMenuRepository.findByUserId(userid));
+        
+        var menus = customMenuService.getAllCustomMenus(userid);
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 조회 성공", menus));
     }
 
-    // 커스텀 주문 생성 / 최근 주문 생성
+    @Operation(summary = "커스텀 메뉴 생성")
     @PostMapping("/gen")
-    public ResponseEntity<?> createCustomMenu(@PathVariable Long userid, @RequestBody CustomMenu menuDto) {
-        User user = userRepository.findById(userid).orElseThrow();
+    public ResponseEntity<ApiResponse<CustomMenuDto.Response>> createCustomMenu(
+            @PathVariable Long userid,
+            @Valid @RequestBody CustomMenuDto.CreateRequest request,
+            Authentication auth) {
         
-        CustomMenu menu = CustomMenu.builder()
-                .user(user)
-                .name(menuDto.getName())
-                .options(menuDto.getOptions())
-                .isRecent(true) // 생성 시 최근 항목으로 설정
-                .build();
+        validateUser(userid, auth);
         
-        customMenuRepository.save(menu);
-        return ResponseEntity.ok("커스텀 메뉴 생성 완료");
+        CustomMenuDto.Response response = customMenuService.createCustomMenu(userid, request);
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 생성 성공", response));
     }
 
-    // 커스텀 메뉴 수정
+    @Operation(summary = "커스텀 메뉴 수정")
     @PutMapping("/update")
-    public ResponseEntity<?> updateCustomMenu(@PathVariable Long userid, @RequestBody CustomMenu menuDto) {
-        CustomMenu menu = customMenuRepository.findById(menuDto.getId()).orElseThrow();
-        menu.setOptions(menuDto.getOptions());
-        menu.setName(menuDto.getName());
-        customMenuRepository.save(menu);
-        return ResponseEntity.ok("수정 완료");
+    public ResponseEntity<ApiResponse<CustomMenuDto.Response>> updateCustomMenu(
+            @PathVariable Long userid,
+            @Valid @RequestBody CustomMenuDto.UpdateRequest request,
+            Authentication auth) {
+        
+        validateUser(userid, auth);
+        
+        CustomMenuDto.Response response = customMenuService.updateCustomMenu(userid, request);
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 수정 성공", response));
     }
 
-    // 커스텀 메뉴 삭제
+    @Operation(summary = "커스텀 메뉴 삭제")
     @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteCustomMenu(@PathVariable Long userid, @RequestParam Long menuId) {
-        customMenuRepository.deleteById(menuId);
-        return ResponseEntity.ok("삭제 완료");
+    public ResponseEntity<ApiResponse<Void>> deleteCustomMenu(
+            @PathVariable Long userid,
+            @RequestParam Long menuId,
+            Authentication auth) {
+        
+        validateUser(userid, auth);
+        
+        customMenuService.deleteCustomMenu(userid, menuId);
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 삭제 성공", null));
     }
 
-    // 커스텀 메뉴 검색 및 조회
+    @Operation(summary = "커스텀 메뉴 검색 및 조회 (최근 생성 순)")
     @GetMapping("/search")
-    public ResponseEntity<?> searchCustomMenu(@PathVariable Long userid) {
-        // 최근 생성 순 정렬 조회 로직 필요
-        List<CustomMenu> menus = customMenuRepository.findByUserIdOrderByCreatedAtDesc(userid);
-        return ResponseEntity.ok(menus);
+    public ResponseEntity<ApiResponse<?>> searchCustomMenu(
+            @PathVariable Long userid,
+            Authentication auth) {
+        
+        validateUser(userid, auth);
+        
+        var menus = customMenuService.getAllCustomMenus(userid);
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 검색 성공", menus));
+    }
+
+    private void validateUser(Long userid, Authentication auth) {
+        Long requestUserId = (Long) auth.getPrincipal();
+        if (!userid.equals(requestUserId)) {
+            throw new RuntimeException("본인의 메뉴만 조회할 수 있습니다");
+        }
     }
 }
