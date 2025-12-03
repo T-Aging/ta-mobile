@@ -1,9 +1,7 @@
 package com.example.tam.modules.push;
 
+import com.example.tam.common.entity.PushHistory;
 import com.example.tam.dto.PushDto;
-import com.example.tam.modules.push.entity.PushHistory;
-import com.example.tam.modules.user.UserRepository;
-import com.example.tam.modules.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,10 +15,9 @@ import java.util.stream.Collectors;
 public class PushService {
     
     private final PushHistoryRepository pushHistoryRepository;
-    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public List<PushDto.Response> getAllPushHistory(Long userId) {
+    public List<PushDto.Response> getAllPushHistory(Integer userId) {
         return pushHistoryRepository.findByUserIdOrderBySentAtDesc(userId)
                 .stream()
                 .map(this::mapToResponse)
@@ -28,21 +25,18 @@ public class PushService {
     }
 
     @Transactional(readOnly = true)
-    public List<PushDto.Response> getPushHistoryByType(Long userId, String type) {
-        return pushHistoryRepository.findByUserIdAndType(userId, type)
+    public List<PushDto.Response> getPushHistoryByType(Integer userId, String type) {
+        return pushHistoryRepository.findByUserIdAndPushType(userId, type)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public void sendKioskConfirmation(Long userId, String orderNumber) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
-
+    public void sendKioskConfirmation(Integer userId, String orderNumber) {
         PushHistory push = PushHistory.builder()
-                .user(user)
-                .type("kiosk-confirm")
+                .userId(userId)
+                .pushType("kiosk-confirm")
                 .message("주문번호 " + orderNumber + "가 키오스크에서 확인되었습니다.")
                 .build();
 
@@ -51,13 +45,10 @@ public class PushService {
     }
 
     @Transactional
-    public void sendReceiptArrival(Long userId, String receiptUrl) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
-
+    public void sendReceiptArrival(Integer userId, String receiptUrl) {
         PushHistory push = PushHistory.builder()
-                .user(user)
-                .type("receipt-arrived")
+                .userId(userId)
+                .pushType("receipt-arrived")
                 .message("모바일 영수증이 도착했습니다.")
                 .build();
 
@@ -67,11 +58,11 @@ public class PushService {
 
     private PushDto.Response mapToResponse(PushHistory push) {
         return PushDto.Response.builder()
-                .id(push.getId())
-                .type(push.getType())
-                .title(getTitle(push.getType()))
+                .id(Long.valueOf(push.getPushId()))
+                .type(push.getPushType())
+                .title(getTitle(push.getPushType()))
                 .message(push.getMessage())
-                .isRead(false) // 추후 읽음 처리 로직 추가 필요
+                .isRead(push.getIsRead())
                 .createdAt(push.getSentAt())
                 .build();
     }
