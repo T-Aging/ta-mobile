@@ -1,89 +1,32 @@
-package com.example.tam.modules.user;
+package com.example.tam.modules.push;
 
 import com.example.tam.dto.ApiResponse;
-import com.example.tam.dto.UserDto;
-import com.example.tam.service.AuthService;
-import com.example.tam.service.QrCodeService;
-import com.example.tam.service.UserService;
+import com.example.tam.dto.PushDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/t-age/users/{userid}")
 @RequiredArgsConstructor
-@Tag(name = "사용자", description = "사용자 관리 API")
-public class UserController {
+@Tag(name = "푸시 알림", description = "푸시 알림 조회 API")
+public class PushController {
 
-    private final UserService userService;
-    private final AuthService authService;
-    private final QrCodeService qrCodeService;
+    private final PushService pushService;
 
-    @Operation(summary = "사용자 정보 조회")
+    @Operation(summary = "키오스크 주문 확인 알림 / 카카오톡 알림 / 모바일 영수증 도착 알림")
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<UserDto.UserResponse>> getUserInfo(
-            @PathVariable Long userid,
-            Authentication auth) {
+    public ResponseEntity<ApiResponse<List<PushDto.Response>>> getPushHistory(
+            @PathVariable Integer userid,
+            @RequestParam(required = false) String type) {
         
-        Long requestUserId = (Long) auth.getPrincipal();
-        UserDto.UserResponse response = userService.getUserInfo(userid, requestUserId);
-        return ResponseEntity.ok(ApiResponse.success("사용자 정보 조회 성공", response));
-    }
-
-    @Operation(summary = "사용자 정보 수정")
-    @PutMapping("/update")
-    public ResponseEntity<ApiResponse<UserDto.UserResponse>> updateUserInfo(
-            @PathVariable Long userid,
-            @Valid @RequestBody UserDto.UserUpdateRequest request,
-            Authentication auth) {
+        List<PushDto.Response> response = type != null 
+            ? pushService.getPushHistoryByType(userid, type)
+            : pushService.getAllPushHistory(userid);
         
-        Long requestUserId = (Long) auth.getPrincipal();
-        UserDto.UserResponse response = userService.updateUserInfo(userid, requestUserId, request);
-        return ResponseEntity.ok(ApiResponse.success("사용자 정보 수정 성공", response));
-    }
-
-    @Operation(summary = "로그아웃")
-    @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(
-            @PathVariable Long userid,
-            Authentication auth) {
-        
-        Long requestUserId = (Long) auth.getPrincipal();
-        if (!userid.equals(requestUserId)) {
-            throw new RuntimeException("본인만 로그아웃할 수 있습니다");
-        }
-        
-        authService.logout(userid);
-        return ResponseEntity.ok(ApiResponse.success("로그아웃 성공", null));
-    }
-
-    @Operation(summary = "회원 탈퇴")
-    @DeleteMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> withdraw(
-            @PathVariable Long userid,
-            Authentication auth) {
-        
-        Long requestUserId = (Long) auth.getPrincipal();
-        userService.deleteUser(userid, requestUserId);
-        return ResponseEntity.ok(ApiResponse.success("회원 탈퇴 성공", null));
-    }
-
-    @Operation(summary = "회원 QR 코드 조회")
-    @GetMapping("/qr")
-    public ResponseEntity<ApiResponse<QrCodeService.QrCodeResponse>> getUserQr(
-            @PathVariable Long userid,
-            Authentication auth) {
-        
-        Long requestUserId = (Long) auth.getPrincipal();
-        if (!userid.equals(requestUserId)) {
-            throw new RuntimeException("본인의 QR 코드만 조회할 수 있습니다");
-        }
-        
-        QrCodeService.QrCodeResponse qrCode = qrCodeService.generateUserQrCode(userid);
-        return ResponseEntity.ok(ApiResponse.success("QR 코드 생성 성공", qrCode));
+        return ResponseEntity.ok(ApiResponse.success("푸시 알림 조회 성공", response));
     }
 }
