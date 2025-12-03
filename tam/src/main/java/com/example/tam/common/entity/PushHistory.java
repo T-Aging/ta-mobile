@@ -6,13 +6,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "push_history")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class PushHistory {
-    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "push_id")
@@ -21,12 +16,8 @@ public class PushHistory {
     @Column(name = "user_id", nullable = false)
     private Integer userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
-    private User user;
-
     @Column(name = "push_type")
-    private String pushType; // kiosk-confirm, kakao-open-api, receipt-arrived
+    private String pushType;
 
     @Column(name = "message")
     private String message;
@@ -39,11 +30,7 @@ public class PushHistory {
 
     @PrePersist
     public void prePersist() {
-        if (sentAt == null) {
-            sentAt = LocalDateTime.now();
-        }
-        if (isRead == null) {
-            isRead = false;
-        }
+        if (sentAt == null) sentAt = LocalDateTime.now();
+        if (isRead == null) isRead = false;
     }
 }
