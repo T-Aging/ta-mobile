@@ -13,38 +13,30 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/t-age/users/{userid}")
 @RequiredArgsConstructor
-@Tag(name = "마이 페이지", description = "사용자 관리 API")
+@Tag(name = "사용자 관리", description = "마이 페이지 API")
 public class UserController {
 
     private final UserService userService;
     private final AuthService authService;
 
     @Operation(summary = "사용자 정보 조회")
-    @GetMapping("/search")
+    @GetMapping
     public ResponseEntity<ApiResponse<UserDto.UserResponse>> getUserInfo(@PathVariable Integer userid) {
         UserDto.UserResponse response = userService.getUserInfo(userid);
         return ResponseEntity.ok(ApiResponse.success("사용자 정보 조회 성공", response));
     }
 
     @Operation(summary = "사용자 정보 수정")
-    @PutMapping("/update")
+    @PutMapping
     public ResponseEntity<ApiResponse<UserDto.UserResponse>> updateUserInfo(
             @PathVariable Integer userid,
             @Valid @RequestBody UserDto.UserUpdateRequest request) {
-        
         UserDto.UserResponse response = userService.updateUserInfo(userid, request);
         return ResponseEntity.ok(ApiResponse.success("사용자 정보 수정 성공", response));
     }
 
-    @Operation(summary = "로그아웃")
-    @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(@PathVariable Integer userid) {
-        authService.logout(userid);
-        return ResponseEntity.ok(ApiResponse.success("로그아웃 성공", null));
-    }
-
     @Operation(summary = "회원 탈퇴")
-    @DeleteMapping("/logout")
+    @DeleteMapping
     public ResponseEntity<ApiResponse<Void>> withdraw(@PathVariable Integer userid) {
         userService.deleteUser(userid);
         return ResponseEntity.ok(ApiResponse.success("회원 탈퇴 성공", null));
