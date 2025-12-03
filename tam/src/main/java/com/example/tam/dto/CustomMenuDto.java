@@ -1,9 +1,7 @@
 package com.example.tam.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
-import java.time.LocalDateTime;
+import java.util.List;
 
 public class CustomMenuDto {
     
@@ -11,47 +9,46 @@ public class CustomMenuDto {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class CreateRequest {
-        @NotBlank(message = "메뉴 이름은 필수입니다")
-        private String name;
-        
-        private String description;
-        
-        @NotBlank(message = "옵션 정보는 필수입니다")
-        private String optionsJson;
-        
-        @NotNull(message = "가격은 필수입니다")
-        private Integer totalPrice;
-    }
-
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class UpdateRequest {
-        @NotNull
-        private Long id;
-        
-        private String name;
-        private String description;
-        private String optionsJson;
-        private Integer totalPrice;
-        private Boolean isFavorite;
-    }
-
-    @Getter
-    @Setter
     @Builder
+    public static class CreateRequest {
+        private Integer menuId;
+        private String customName;
+        private List<OptionDetail> options;
+    }
+
+    @Getter
+    @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Builder
+    public static class OptionDetail {
+        private Integer optionId;
+        private Integer extraNum; // 추가 개수
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class UpdateRequest {
+        private Integer customId;
+        private String customName;
+        private List<OptionDetail> options;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class Response {
-        private Long id;
-        private String name;
-        private String description;
-        private String optionsJson;
+        private Integer customId;
+        private Integer userId;
+        private Integer menuId;
+        private String menuName;
+        private String customName;
         private Integer totalPrice;
-        private Boolean isFavorite;
-        private LocalDateTime createdAt;
-        private LocalDateTime updatedAt;
+        private List<OptionDetail> options;
     }
 }
