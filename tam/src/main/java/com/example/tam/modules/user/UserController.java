@@ -1,61 +1,89 @@
 package com.example.tam.modules.user;
 
-import com.example.tam.modules.user.entity.User; // 기존 User 엔티티 사용
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
+import com.example.tam.dto.ApiResponse;
+import com.example.tam.dto.UserDto;
+import com.example.tam.service.AuthService;
+import com.example.tam.service.QrCodeService;
+import com.example.tam.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/t-age")
+@RequestMapping("/t-age/users/{userid}")
 @RequiredArgsConstructor
-public class TAgeUserController {
+@Tag(name = "사용자", description = "사용자 관리 API")
+public class UserController {
 
-    private final UserRepository userRepository;
-    // private final KakaoAuthService kakaoAuthService; // 카카오 통신용 서비스(별도 구현 필요)
+    private final UserService userService;
+    private final AuthService authService;
+    private final QrCodeService qrCodeService;
 
-    // 1. 카카오 회원 가입
-    @GetMapping("/signup")
-    public ResponseEntity<?> kakaoSignup(@RequestParam String code) {
-        // TODO: 카카오 인가 코드로 액세스 토큰 발급 -> 사용자 정보 조회 -> DB 저장
-        return ResponseEntity.ok("카카오 회원가입 완료 (Mock)");
+    @Operation(summary = "사용자 정보 조회")
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<UserDto.UserResponse>> getUserInfo(
+            @PathVariable Long userid,
+            Authentication auth) {
+        
+        Long requestUserId = (Long) auth.getPrincipal();
+        UserDto.UserResponse response = userService.getUserInfo(userid, requestUserId);
+        return ResponseEntity.ok(ApiResponse.success("사용자 정보 조회 성공", response));
     }
 
-    // 2. 카카오 소셜 로그인
-    @PostMapping("/login")
-    public ResponseEntity<?> kakaoLogin(@RequestBody Map<String, String> loginData) {
-        // TODO: 카카오 토큰 검증 및 자체 JWT 발급
-        return ResponseEntity.ok(Map.of("token", "jwt-token-example", "userId", 1L));
+    @Operation(summary = "사용자 정보 수정")
+    @PutMapping("/update")
+    public ResponseEntity<ApiResponse<UserDto.UserResponse>> updateUserInfo(
+            @PathVariable Long userid,
+            @Valid @RequestBody UserDto.UserUpdateRequest request,
+            Authentication auth) {
+        
+        Long requestUserId = (Long) auth.getPrincipal();
+        UserDto.UserResponse response = userService.updateUserInfo(userid, requestUserId, request);
+        return ResponseEntity.ok(ApiResponse.success("사용자 정보 수정 성공", response));
     }
 
-    // --- 마이 페이지 ---
-
-    // 사용자 정보 조회
-    @GetMapping("/users/{userid}/search")
-    public ResponseEntity<?> getUserInfo(@PathVariable Long userid) {
-        User user = userRepository.findById(userid).orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(user);
+    @Operation(summary = "로그아웃")
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @PathVariable Long userid,
+            Authentication auth) {
+        
+        Long requestUserId = (Long) auth.getPrincipal();
+        if (!userid.equals(requestUserId)) {
+            throw new RuntimeException("본인만 로그아웃할 수 있습니다");
+        }
+        
+        authService.logout(userid);
+        return ResponseEntity.ok(ApiResponse.success("로그아웃 성공", null));
     }
 
-    // 사용자 정보 수정
-    @PutMapping("/users/{userid}/update")
-    public ResponseEntity<?> updateUserInfo(@PathVariable Long userid, @RequestBody User userDetails) {
-        User user = userRepository.findById(userid).orElseThrow();
-        user.setUsername(userDetails.getUsername()); // 예시
-        userRepository.save(user);
-        return ResponseEntity.ok("수정 완료");
+    @Operation(summary = "회원 탈퇴")
+    @DeleteMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> withdraw(
+            @PathVariable Long userid,
+            Authentication auth) {
+        
+        Long requestUserId = (Long) auth.getPrincipal();
+        userService.deleteUser(userid, requestUserId);
+        return ResponseEntity.ok(ApiResponse.success("회원 탈퇴 성공", null));
     }
 
-    // 로그아웃
-    @PostMapping("/users/{userid}/logout")
-    public ResponseEntity<?> logout(@PathVariable Long userid) {
-        return ResponseEntity.ok("로그아웃 처리됨");
-    }
-
-    // 탈퇴하기
-    @DeleteMapping("/users/{userid}/logout")
-    public ResponseEntity<?> withdraw(@PathVariable Long userid) {
-        userRepository.deleteById(userid);
-        return ResponseEntity.ok("탈퇴 완료");
+    @Operation(summary = "회원 QR 코드 조회")
+    @GetMapping("/qr")
+    public ResponseEntity<ApiResponse<QrCodeService.QrCodeResponse>> getUserQr(
+            @PathVariable Long userid,
+            Authentication auth) {
+        
+        Long requestUserId = (Long) auth.getPrincipal();
+        if (!userid.equals(requestUserId)) {
+            throw new RuntimeException("본인의 QR 코드만 조회할 수 있습니다");
+        }
+        
+        QrCodeService.QrCodeResponse qrCode = qrCodeService.generateUserQrCode(userid);
+        return ResponseEntity.ok(ApiResponse.success("QR 코드 생성 성공", qrCode));
     }
 }
