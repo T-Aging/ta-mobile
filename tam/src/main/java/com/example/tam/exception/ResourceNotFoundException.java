@@ -1,21 +1,7 @@
-package com.example.tam.dto;
+package com.example.tam.exception;
 
-import lombok.*;
-import java.time.LocalDateTime;
-
-public class PushDto {
-    
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Response {
-        private Long id;
-        private String type;
-        private String title;
-        private String message;
-        private Boolean isRead;
-        private LocalDateTime createdAt;
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
+        super(message);
     }
 }
