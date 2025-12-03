@@ -1,5 +1,6 @@
-package com.example.tam.entity;
+package com.example.tam.modules.custom.entity;
 
+import com.example.tam.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -19,12 +20,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class CustomMenu {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -33,13 +36,16 @@ public class CustomMenu {
     private String description;
 
     @Column(name = "options_json", columnDefinition = "TEXT")
-    private String optionsJson;
+    private String options;
 
     @Column(name = "total_price")
     private Integer totalPrice;
 
     @Column(name = "is_favorite")
     private Boolean isFavorite = false;
+
+    @Column(name = "is_recent")
+    private Boolean isRecent = false;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
