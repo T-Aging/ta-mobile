@@ -1,43 +1,86 @@
 package com.example.tam.modules.order;
 
-import com.example.tam.modules.order.entity.Order;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
+import com.example.tam.dto.ApiResponse;
+import com.example.tam.dto.OrderDto;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import java.util.List;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/t-age/users/{userid}/order")
 @RequiredArgsConstructor
+@Tag(name = "주문", description = "주문 관리 API")
 public class OrderController {
 
-    private final OrderRepository orderRepository;
+    private final OrderService orderService;
 
-    // 주문 내역 조회 (기본 / 상세 / 영수증)
+    @Operation(summary = "주문 내역 조회 (기본/상세/영수증)")
     @GetMapping("/search")
-    public ResponseEntity<?> getOrders(@PathVariable Long userid) {
-        List<Order> orders = orderRepository.findByUserId(userid);
-        return ResponseEntity.ok(orders);
+    public ResponseEntity<ApiResponse<?>> getOrders(
+            @PathVariable Long userid,
+            @RequestParam(required = false) Long orderId,
+            Authentication auth) {
+        
+        validateUser(userid, auth);
+        
+        if (orderId != null) {
+            var order = orderService.getOrderDetail(userid, orderId);
+            return ResponseEntity.ok(ApiResponse.success("주문 상세 조회 성공", order));
+        }
+        
+        var orders = orderService.getAllOrders(userid);
+        return ResponseEntity.ok(ApiResponse.success("주문 내역 조회 성공", orders));
     }
 
-    // 기간 설정 및 기간 내 조회
+    @Operation(summary = "기간 설정 및 기간 내 주문 조회")
     @PostMapping("/date-set")
-    public ResponseEntity<?> getOrdersByDate(@PathVariable Long userid, @RequestBody DateRangeDto range) {
-        // TODO: range.getStartDate(), range.getEndDate()로 DB 조회 구현
-        return ResponseEntity.ok("기간 내 주문 목록 반환");
+    public ResponseEntity<ApiResponse<?>> getOrdersByDate(
+            @PathVariable Long userid,
+            @Valid @RequestBody OrderDto.DateRangeRequest request,
+            Authentication auth) {
+        
+        validateUser(userid, auth);
+        
+        var orders = orderService.getOrdersByDateRange(
+                userid, request.getFromDate(), request.getToDate());
+        return ResponseEntity.ok(ApiResponse.success("기간 내 주문 조회 성공", orders));
     }
 
-    // 주문 내역으로 커스텀 메뉴 생성
-    @PostMapping("/cus-gen")
-    public ResponseEntity<?> createCustomFromOrder(@PathVariable Long userid, @RequestBody Map<String, Long> request) {
-        Long orderId = request.get("orderId");
-        // TODO: Order를 조회해서 그 옵션을 바탕으로 CustomMenu 저장 로직
-        return ResponseEntity.ok("주문 내역 기반 커스텀 메뉴 생성 완료");
+    @Operation(summary = "주문 생성")
+    @PostMapping("/create")
+    public ResponseEntity<ApiResponse<OrderDto.Response>> createOrder(
+            @PathVariable Long userid,
+            @Valid @RequestBody OrderDto.CreateRequest request,
+            Authentication auth) {
+        
+        validateUser(userid, auth);
+        
+        OrderDto.Response response = orderService.createOrder(userid, request);
+        return ResponseEntity.ok(ApiResponse.success("주문 생성 성공", response));
     }
-    
-    // DTO 클래스
-    static class DateRangeDto {
-        public String startDate;
-        public String endDate;
+
+    @Operation(summary = "주문 내역으로 커스텀 메뉴 생성")
+    @PostMapping("/cus-gen")
+    public ResponseEntity<ApiResponse<?>> createCustomFromOrder(
+            @PathVariable Long userid,
+            @Valid @RequestBody OrderDto.CreateFromCustomRequest request,
+            Authentication auth) {
+        
+        validateUser(userid, auth);
+        
+        var response = orderService.createOrderFromCustomMenu(
+                userid, request.getCustomMenuId(), request.getQuantity());
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 기반 주문 생성 성공", response));
+    }
+
+    private void validateUser(Long userid, Authentication auth) {
+        Long requestUserId = (Long) auth.getPrincipal();
+        if (!userid.equals(requestUserId)) {
+            throw new RuntimeException("본인의 주문만 조회할 수 있습니다");
+        }
     }
 }
