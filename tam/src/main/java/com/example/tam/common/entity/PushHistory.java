@@ -26,6 +26,7 @@ public class PushHistory {
     private LocalDateTime sentAt;
 
     @Column(name = "is_read")
+    @Builder.Default // [수정] 이 어노테이션 추가
     private Boolean isRead = false;
 
     @PrePersist

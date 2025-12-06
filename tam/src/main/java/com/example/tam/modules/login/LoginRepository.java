@@ -1,9 +1,9 @@
 package com.example.tam.modules.login;
 
-import com.example.tam.modules.user.User; // 방금 만든 User 파일을 가져옵니다.
+// [수정] 아래 import가 modules.user.User로 되어있으면 common.entity.User로 바꿔주세요
+import com.example.tam.common.entity.User; 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-
 import java.util.Optional;
 
 @Repository

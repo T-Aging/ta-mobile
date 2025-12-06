@@ -2,13 +2,22 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.0'
     id 'io.spring.dependency-management' version '1.1.7'
+    // 여기에 foojay 플러그인이 있으면 안 됩니다! (지움)
 }
+
+// 여기에 rootProject.name이 있으면 안 됩니다! (지움)
 
 group = 'com.example'
 version = '1.0.0'
 
+// 롬복 버전 강제 지정
+ext['lombok.version'] = '1.18.36'
+
 java {
-    sourceCompatibility = '17' 
+    // 이 프로젝트는 Java 17을 사용한다고 명시 (자동 다운로드됨)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 configurations {
@@ -32,9 +41,11 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    // Lombok 추가
+    // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 
     // JWT
     implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
@@ -45,7 +56,7 @@ dependencies {
     implementation 'com.google.zxing:core:3.5.2'
     implementation 'com.google.zxing:javase:3.5.2'
 
-    // WebFlux (Kakao API 호출용)
+    // WebFlux
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
     // Swagger

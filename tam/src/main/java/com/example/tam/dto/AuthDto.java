@@ -25,7 +25,10 @@ public class AuthDto {
         private String email;
         private String accessToken;
         private String refreshToken;
+        
+        @Builder.Default // [수정] 이 어노테이션 추가
         private String tokenType = "Bearer";
+        
         private Long expiresIn;
     }
 

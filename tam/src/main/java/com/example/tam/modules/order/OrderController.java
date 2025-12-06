@@ -1,7 +1,7 @@
-package com.example.tam.modules.custom;
+package com.example.tam.modules.order;
 
 import com.example.tam.dto.ApiResponse;
-import com.example.tam.dto.CustomMenuDto;
+import com.example.tam.dto.OrderDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,61 +13,54 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/t-age/users/{userid}/custom-menus")
+@RequestMapping("/t-age/users/{userid}/orders")
 @RequiredArgsConstructor
-@Tag(name = "커스텀 메뉴", description = "나만의 메뉴 관리 API")
-public class CustomController {
+@Tag(name = "주문", description = "주문 내역 및 영수증 관리 API")
+public class OrderController {
 
-    private final CustomService customService;
+    private final OrderService orderService;
 
-    @Operation(summary = "커스텀 메뉴 목록 조회 (검색 및 정렬 포함)", 
-               description = "keyword가 있으면 검색, 없으면 전체 조회. 최근 생성 순으로 반환됩니다.")
+    @Operation(summary = "주문 내역 조회 (기간 필터링)")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CustomMenuDto.Response>>> getCustomMenus(
+    public ResponseEntity<ApiResponse<List<OrderDto.Response>>> getOrders(
             @PathVariable Integer userid,
-            @Parameter(description = "검색어") @RequestParam(required = false) String keyword) {
+            @Parameter(description = "시작 날짜") @RequestParam(required = false) String fromDate,
+            @Parameter(description = "종료 날짜") @RequestParam(required = false) String toDate) {
         
-        // Service 내부에서 keyword 유무에 따라 검색 로직 분기 처리 권장
-        List<CustomMenuDto.Response> menus = customService.getCustomMenus(userid, keyword);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 조회 성공", menus));
+        List<OrderDto.Response> orders;
+        if (fromDate != null && toDate != null) {
+            orders = orderService.getOrdersByDateRange(userid, fromDate, toDate);
+        } else {
+            orders = orderService.getAllOrders(userid);
+        }
+        return ResponseEntity.ok(ApiResponse.success("주문 내역 조회 성공", orders));
     }
 
-    @Operation(summary = "커스텀 메뉴 상세 조회")
-    @GetMapping("/{customId}")
-    public ResponseEntity<ApiResponse<CustomMenuDto.Response>> getCustomMenuDetail(
+    @Operation(summary = "주문 상세 조회")
+    @GetMapping("/{orderId}")
+    public ResponseEntity<ApiResponse<OrderDto.Response>> getOrderDetail(
             @PathVariable Integer userid,
-            @PathVariable Integer customId) {
-        CustomMenuDto.Response menu = customService.getCustomMenuDetail(userid, customId);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 상세 조회 성공", menu));
+            @PathVariable Integer orderId) {
+        OrderDto.Response order = orderService.getOrderDetail(userid, orderId);
+        return ResponseEntity.ok(ApiResponse.success("주문 상세 조회 성공", order));
     }
 
-    @Operation(summary = "커스텀 메뉴 생성")
+    @Operation(summary = "주문 생성")
     @PostMapping
-    public ResponseEntity<ApiResponse<CustomMenuDto.Response>> createCustomMenu(
+    public ResponseEntity<ApiResponse<OrderDto.Response>> createOrder(
             @PathVariable Integer userid,
-            @Valid @RequestBody CustomMenuDto.CreateRequest request) {
-        CustomMenuDto.Response response = customService.createCustomMenu(userid, request);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 생성 성공", response));
+            @Valid @RequestBody OrderDto.CreateRequest request) {
+        OrderDto.Response response = orderService.createOrder(userid, request);
+        return ResponseEntity.ok(ApiResponse.success("주문 생성 성공", response));
     }
 
-    @Operation(summary = "커스텀 메뉴 수정")
-    @PutMapping("/{customId}")
-    public ResponseEntity<ApiResponse<CustomMenuDto.Response>> updateCustomMenu(
+    @Operation(summary = "과거 주문으로 커스텀 메뉴 생성")
+    @PostMapping("/{orderId}/to-custom")
+    public ResponseEntity<ApiResponse<Void>> createCustomFromOrder(
             @PathVariable Integer userid,
-            @PathVariable Integer customId,
-            @Valid @RequestBody CustomMenuDto.UpdateRequest request) {
-        // Path ID와 Body 데이터 일치 보장
-        request.setCustomId(customId); 
-        CustomMenuDto.Response response = customService.updateCustomMenu(userid, request);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 수정 성공", response));
-    }
-
-    @Operation(summary = "커스텀 메뉴 삭제")
-    @DeleteMapping("/{customId}")
-    public ResponseEntity<ApiResponse<Void>> deleteCustomMenu(
-            @PathVariable Integer userid,
-            @PathVariable Integer customId) {
-        customService.deleteCustomMenu(userid, customId);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 삭제 성공", null));
+            @PathVariable Integer orderId,
+            @RequestParam String customName) {
+        orderService.createCustomMenuFromOrder(userid, orderId, customName);
+        return ResponseEntity.ok(ApiResponse.success("주문 기반 커스텀 메뉴 생성 성공", null));
     }
 }

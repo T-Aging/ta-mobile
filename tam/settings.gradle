@@ -1,1 +1,6 @@
+plugins {
+    // Java 자동 다운로드 플러그인 (버전을 1.0.0으로 업데이트)
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'tam'
