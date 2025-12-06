@@ -1,52 +1,30 @@
-// ... 기존 import 유지
+package com.example.tam.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
-    
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session -> 
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // CSRF 보안 설정 비활성화 (모바일 앱/API 서버 개발 시 보통 끕니다)
+            .csrf(AbstractHttpConfigurer::disable)
+            
+            // 요청 주소별 권한 설정
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/t-age/signup",
-                    "/t-age/auth/**", // Auth 관련 경로 통합
-                    "/t-age/kiosk/**", // 키오스크 API는 일단 열어두되 추후 IP제한/API Key 적용 권장
-                    "/api-docs/**",
-                    "/swagger-ui/**"
-                ).permitAll()
+                // 로그인 관련 주소는 누구나 접근 가능
+                .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // 그 외 모든 요청은 인증 필요
                 .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthenticationFilter, 
-                UsernamePasswordAuthenticationFilter.class);
-        
+            );
+
         return http.build();
     }
-     @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
-            CorsConfiguration configuration = new CorsConfiguration();
-            configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000", 
-                "http://localhost:8080",
-                "http://localhost:5173"
-            ));
-            configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-            configuration.setAllowedHeaders(Arrays.asList("*"));
-            configuration.setAllowCredentials(true);
-            
-            UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-            source.registerCorsConfiguration("/**", configuration);
-            return source;
-        }
-    
-        @Bean
-        public PasswordEncoder passwordEncoder() {
-            return new BCryptPasswordEncoder();
-        }
 }

@@ -12,10 +12,11 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/t-age/users/{userid}/custom-menus")
 @RequiredArgsConstructor
-@Tag(name = "커스텀 메뉴", description = "커스텀 메뉴 관리 API")
+@Tag(name = "커스텀 메뉴", description = "나만의 메뉴 관리 API")
 public class CustomController {
 
-    private final CustomService customService;
+    // CustomMenuService 혹은 CustomService (프로젝트 내 클래스명 확인 후 사용)
+    private final CustomService customService; 
 
     @Operation(summary = "커스텀 메뉴 목록 조회")
     @GetMapping
@@ -48,8 +49,7 @@ public class CustomController {
             @PathVariable Integer userid,
             @PathVariable Integer customId,
             @Valid @RequestBody CustomMenuDto.UpdateRequest request) {
-        // URL의 customId를 request에 주입하거나 서비스에서 검증 필요
-        request.setCustomId(customId); 
+        request.setCustomId(customId); // PathVariable ID 주입
         CustomMenuDto.Response response = customService.updateCustomMenu(userid, request);
         return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 수정 성공", response));
     }
