@@ -2,6 +2,7 @@ package com.example.tam.modules.user;
 
 import com.example.tam.dto.ApiResponse;
 import com.example.tam.dto.UserDto;
+import com.example.tam.modules.auth.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
 
     @Operation(summary = "사용자 정보 조회 (마이페이지)")
     @GetMapping
@@ -40,7 +42,14 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("회원 탈퇴 성공", null));
     }
 
-    @Operation(summary = "키오스크용 회원 QR 코드 조회")
+    @Operation(summary = "로그아웃")
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@PathVariable Integer userid) {
+        authService.logout(userid);
+        return ResponseEntity.ok(ApiResponse.success("로그아웃 성공", null));
+    }
+
+    @Operation(summary = "키오스크용 회원 QR 코드 데이터 조회")
     @GetMapping("/qr")
     public ResponseEntity<ApiResponse<String>> getUserQr(@PathVariable Integer userid) {
         String qrData = userService.getUserQr(userid);

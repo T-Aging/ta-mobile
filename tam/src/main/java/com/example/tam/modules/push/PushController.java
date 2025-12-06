@@ -1,33 +1,58 @@
-package com.example.tam.modules.push;
+package com.example.tam.modules.user;
 
 import com.example.tam.dto.ApiResponse;
-import com.example.tam.dto.PushDto;
+import com.example.tam.dto.UserDto;
+import com.example.tam.modules.auth.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
-@RequestMapping("/t-age/users/{userid}/notifications")
+@RequestMapping("/t-age/users/{userid}")
 @RequiredArgsConstructor
-@Tag(name = "푸시 알림", description = "알림 내역 조회 API")
-public class PushController {
+@Tag(name = "사용자 관리", description = "마이 페이지 및 회원 관리 API")
+public class UserController {
 
-    private final PushService pushService;
+    private final UserService userService;
+    private final AuthService authService;
 
-    @Operation(summary = "알림 내역 조회", description = "type 파라미터(kiosk-confirm, receipt 등)로 필터링 가능")
+    @Operation(summary = "사용자 정보 조회 (마이페이지)")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PushDto.Response>>> getPushHistory(
+    public ResponseEntity<ApiResponse<UserDto.UserResponse>> getUserInfo(@PathVariable Integer userid) {
+        UserDto.UserResponse response = userService.getUserInfo(userid);
+        return ResponseEntity.ok(ApiResponse.success("사용자 정보 조회 성공", response));
+    }
+
+    @Operation(summary = "사용자 정보 수정")
+    @PutMapping
+    public ResponseEntity<ApiResponse<UserDto.UserResponse>> updateUserInfo(
             @PathVariable Integer userid,
-            @Parameter(description = "알림 타입 (없으면 전체 조회)") @RequestParam(required = false) String type) {
-        
-        List<PushDto.Response> response = (type != null && !type.isEmpty())
-            ? pushService.getPushHistoryByType(userid, type)
-            : pushService.getAllPushHistory(userid);
-        
-        return ResponseEntity.ok(ApiResponse.success("알림 조회 성공", response));
+            @Valid @RequestBody UserDto.UserUpdateRequest request) {
+        UserDto.UserResponse response = userService.updateUserInfo(userid, request);
+        return ResponseEntity.ok(ApiResponse.success("사용자 정보 수정 성공", response));
+    }
+
+    @Operation(summary = "회원 탈퇴")
+    @DeleteMapping
+    public ResponseEntity<ApiResponse<Void>> withdraw(@PathVariable Integer userid) {
+        userService.deleteUser(userid);
+        return ResponseEntity.ok(ApiResponse.success("회원 탈퇴 성공", null));
+    }
+
+    @Operation(summary = "로그아웃")
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@PathVariable Integer userid) {
+        authService.logout(userid);
+        return ResponseEntity.ok(ApiResponse.success("로그아웃 성공", null));
+    }
+
+    @Operation(summary = "키오스크용 회원 QR 코드 데이터 조회")
+    @GetMapping("/qr")
+    public ResponseEntity<ApiResponse<String>> getUserQr(@PathVariable Integer userid) {
+        String qrData = userService.getUserQr(userid);
+        return ResponseEntity.ok(ApiResponse.success("QR 코드 조회 성공", qrData));
     }
 }

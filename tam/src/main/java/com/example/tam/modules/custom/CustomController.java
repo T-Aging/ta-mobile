@@ -3,11 +3,14 @@ package com.example.tam.modules.custom;
 import com.example.tam.dto.ApiResponse;
 import com.example.tam.dto.CustomMenuDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/t-age/users/{userid}/custom-menus")
@@ -15,22 +18,26 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "커스텀 메뉴", description = "나만의 메뉴 관리 API")
 public class CustomController {
 
-    // CustomMenuService 혹은 CustomService (프로젝트 내 클래스명 확인 후 사용)
-    private final CustomService customService; 
+    private final CustomService customService;
 
-    @Operation(summary = "커스텀 메뉴 목록 조회")
+    @Operation(summary = "커스텀 메뉴 목록 조회 (검색 및 정렬 포함)", 
+               description = "keyword가 있으면 검색, 없으면 전체 조회. 최근 생성 순으로 반환됩니다.")
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> getCustomMenus(@PathVariable Integer userid) {
-        var menus = customService.getAllCustomMenus(userid);
+    public ResponseEntity<ApiResponse<List<CustomMenuDto.Response>>> getCustomMenus(
+            @PathVariable Integer userid,
+            @Parameter(description = "검색어") @RequestParam(required = false) String keyword) {
+        
+        // Service 내부에서 keyword 유무에 따라 검색 로직 분기 처리 권장
+        List<CustomMenuDto.Response> menus = customService.getCustomMenus(userid, keyword);
         return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 조회 성공", menus));
     }
 
     @Operation(summary = "커스텀 메뉴 상세 조회")
     @GetMapping("/{customId}")
-    public ResponseEntity<ApiResponse<?>> getCustomMenuDetail(
+    public ResponseEntity<ApiResponse<CustomMenuDto.Response>> getCustomMenuDetail(
             @PathVariable Integer userid,
             @PathVariable Integer customId) {
-        var menu = customService.getCustomMenuDetail(userid, customId);
+        CustomMenuDto.Response menu = customService.getCustomMenuDetail(userid, customId);
         return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 상세 조회 성공", menu));
     }
 
@@ -49,7 +56,8 @@ public class CustomController {
             @PathVariable Integer userid,
             @PathVariable Integer customId,
             @Valid @RequestBody CustomMenuDto.UpdateRequest request) {
-        request.setCustomId(customId); // PathVariable ID 주입
+        // Path ID와 Body 데이터 일치 보장
+        request.setCustomId(customId); 
         CustomMenuDto.Response response = customService.updateCustomMenu(userid, request);
         return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 수정 성공", response));
     }
