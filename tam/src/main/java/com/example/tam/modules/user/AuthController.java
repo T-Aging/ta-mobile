@@ -1,5 +1,6 @@
 package com.example.tam.modules.user;
-
+import org.springframework.beans.factory.annotation.Value; 
+import org.springframework.web.servlet.view.RedirectView;
 import com.example.tam.dto.ApiResponse;
 import com.example.tam.dto.AuthDto;
 import com.example.tam.modules.auth.AuthService;
@@ -20,10 +21,21 @@ public class AuthController {
     
     private final AuthService authService;
 
-    // 카카오 로그인 페이지 리다이렉트 (테스트용)
+    // application.properties에서 값 가져오기
+    @Value("${spring.security.oauth2.client.registration.kakao.client-id}")
+    private String kakaoClientId;
+    
+    @Value("${spring.security.oauth2.client.registration.kakao.redirect-uri}")
+    private String kakaoRedirectUri;
+
+    // [수정] 진짜 카카오 로그인 페이지로 이동시키는 메서드
     @GetMapping("/signup")
-    public ResponseEntity<ApiResponse<String>> kakaoSignupRedirect() {
-        return ResponseEntity.ok(ApiResponse.success("카카오 인증 페이지 URL 필요", "http://kakao..."));
+    public RedirectView kakaoSignupRedirect() {
+        String reqUrl = "https://kauth.kakao.com/oauth/authorize" +
+                        "?client_id=" + kakaoClientId +
+                        "&redirect_uri=" + kakaoRedirectUri +
+                        "&response_type=code";
+        return new RedirectView(reqUrl);
     }
 
     // 카카오 인증 코드 콜백 처리
