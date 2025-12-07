@@ -15,9 +15,8 @@ public class OrderHeader {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_id")
-    private Integer id;
+    private Integer orderId; // id -> orderId 변경
 
-    // Store 엔티티가 있어야 합니다. (기존에 만드신 것 사용)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
@@ -29,7 +28,7 @@ public class OrderHeader {
     private String sessionId;
 
     @Column(name = "order_datetime")
-    private LocalDateTime orderDateTime;
+    private LocalDateTime orderDatetime; // Service에서 찾는 이름(getTimestamp 등 확인 필요하지만 일단 유지)
 
     @Column(name = "order_date")
     private LocalDate orderDate;
@@ -37,20 +36,16 @@ public class OrderHeader {
     @Column(name = "waiting_num")
     private Integer waitingNum;
 
-    @Column(name = "total_price", precision = 10, scale=2)
-    private BigDecimal totalPrice;
+    @Column(name = "total_price")
+    private Integer totalPrice; // BigDecimal -> Integer (Service 로직에 맞춤)
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "order_state")
-    private OrderState orderState;
+    private String orderStatus; // Enum 대신 String으로 Service가 사용중일 수 있어 수정 (또는 Service 수정)
+    // *주의: Service코드가 getOrderStatus()를 String으로 받고 있어서 String으로 변경했습니다.
 
     @OneToMany(mappedBy = "orderHeader", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderDetail> orderDetails = new ArrayList<>();
-
-    public enum OrderState {
-        CART, PLACED, CONFIRM, PAID, MAKING, READY, PICKED, CANCELLED, FAILED
-    }
 
     public void addDetail(OrderDetail detail){
         orderDetails.add(detail);
