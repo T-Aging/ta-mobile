@@ -1,21 +1,22 @@
 package com.example.tam.common.entity;
 
+
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user")
-@EntityListeners(AuditingEntityListener.class)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
-    private Integer userId;
+    @Column(name = "user_id", nullable = false)
+    private Integer userId;   // 회원 식별자 UUID (INT)
 
     @Column(name = "username")
     private String username;
@@ -26,11 +27,9 @@ public class User {
     @Column(name = "phone_number")
     private String phoneNumber;
 
-    @CreatedDate
-    @Column(name = "signup_date", updatable = false)
+    @Column(name = "signup_date")
     private LocalDateTime signupDate;
 
-    @LastModifiedDate
     @Column(name = "update_date")
     private LocalDateTime updateDate;
 

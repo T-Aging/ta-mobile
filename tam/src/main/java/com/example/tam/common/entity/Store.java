@@ -1,20 +1,27 @@
 package com.example.tam.common.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
-@Table(name = "store")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Table(name="store")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Store {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "store_id")
-    private Integer storeId;
+    private Integer id;
 
-    @Column(name = "store_name")
-    private String storeName;
+    @Column(name = "store_name", length = 100)
+    private String name;
 
-    @Column(name = "store_address")
-    private String storeAddress;
+    @Column(name = "store_address", length = 100)
+    private String address;
 }
+

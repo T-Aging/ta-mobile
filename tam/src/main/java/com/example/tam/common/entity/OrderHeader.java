@@ -1,7 +1,10 @@
 package com.example.tam.common.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -9,13 +12,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "order_header")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Table(name="order_header")
+@Getter
+@Setter
+@NoArgsConstructor
 public class OrderHeader {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_id")
-    private Integer orderId; // id -> orderId 변경
+    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id", nullable = false)
@@ -28,24 +33,27 @@ public class OrderHeader {
     private String sessionId;
 
     @Column(name = "order_datetime")
-    private LocalDateTime orderDatetime; // Service에서 찾는 이름(getTimestamp 등 확인 필요하지만 일단 유지)
+    private LocalDateTime orderDateTime;
 
     @Column(name = "order_date")
     private LocalDate orderDate;
 
     @Column(name = "waiting_num")
-    private Integer waitingNum;
+    private  Integer waitingNum;
 
-    @Column(name = "total_price")
-    private Integer totalPrice; // BigDecimal -> Integer (Service 로직에 맞춤)
+    @Column(name = "total_price", precision = 10, scale=2)
+    private BigDecimal totalPrice;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "order_state")
-    private String orderStatus; // Enum 대신 String으로 Service가 사용중일 수 있어 수정 (또는 Service 수정)
-    // *주의: Service코드가 getOrderStatus()를 String으로 받고 있어서 String으로 변경했습니다.
+    private OrderState orderState;
 
     @OneToMany(mappedBy = "orderHeader", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<OrderDetail> orderDetails = new ArrayList<>();
+
+    public enum OrderState{
+        CART, PLACED, CONFIRM, PAID, MAKING, READY, PICKED, CANCELLED, FAILED
+    }
 
     public void addDetail(OrderDetail detail){
         orderDetails.add(detail);
