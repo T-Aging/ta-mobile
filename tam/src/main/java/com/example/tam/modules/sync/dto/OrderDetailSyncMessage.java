@@ -3,7 +3,7 @@ package com.example.tam.modules.sync.dto;
 import java.util.List;
 
 public record OrderDetailSyncMessage(
-        Integer orderDetailId,
+        Integer sourceOrderDetailId,
         Integer menuId,
         Integer quantity,
         String temperature,
