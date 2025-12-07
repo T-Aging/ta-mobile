@@ -1,4 +1,4 @@
-package com.example.tam.common;
+package com.example.tam.modules.qr;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
@@ -17,7 +17,7 @@ public class QrService {
         try (ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream()) {
             MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
             byte[] pngData = pngOutputStream.toByteArray();
-            return Base64.getEncoder().encodeToString(pngData); // Base64 이미지 문자열 반환
+            return Base64.getEncoder().encodeToString(pngData); // 이미지를 글자(Base64)로 변환해서 반환
         }
     }
 }

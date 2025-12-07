@@ -3,6 +3,7 @@ package com.example.tam.modules.user;
 import com.example.tam.dto.ApiResponse;
 import com.example.tam.dto.UserDto;
 import com.example.tam.modules.auth.AuthService;
+import com.example.tam.modules.qr.QrService; // [추가] QrService 임포트
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,7 +19,9 @@ public class UserController {
 
     private final UserService userService;
     private final AuthService authService;
+    private final QrService qrService; // [추가] 서비스 주입
 
+    // ... (기존 메서드들 생략, 아래 getUserQr만 수정) ...
     @Operation(summary = "사용자 정보 조회 (마이페이지)")
     @GetMapping
     public ResponseEntity<ApiResponse<UserDto.UserResponse>> getUserInfo(@PathVariable Integer userid) {
@@ -52,7 +55,15 @@ public class UserController {
     @Operation(summary = "키오스크용 회원 QR 코드 데이터 조회")
     @GetMapping("/qr")
     public ResponseEntity<ApiResponse<String>> getUserQr(@PathVariable Integer userid) {
+        // 1. "QR_1" 같은 문자열 데이터 가져오기
         String qrData = userService.getUserQr(userid);
-        return ResponseEntity.ok(ApiResponse.success("QR 코드 조회 성공", qrData));
+        
+        try {
+            // 2. 문자열을 진짜 QR 코드 이미지(Base64)로 변환!
+            String qrImage = qrService.generateQrCode(qrData, 300, 300);
+            return ResponseEntity.ok(ApiResponse.success("QR 이미지 생성 성공", qrImage));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(ApiResponse.error("QR 생성 실패"));
+        }
     }
 }
