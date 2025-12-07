@@ -6,14 +6,20 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "kakao")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Kakao {
+
     @Id
-    @Column(name = "kakao_id")
+    @Column(name = "kakao_id", nullable = false)
     private String kakaoId;
 
-    @Column(name = "user_id", nullable = false)
-    private Integer userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;   // FK: user.user_id
 
     @Column(name = "access_token")
     private String accessToken;
@@ -24,3 +30,4 @@ public class Kakao {
     @Column(name = "last_access_date")
     private LocalDateTime lastAccessDate;
 }
+

@@ -1,19 +1,25 @@
 package com.example.tam.common.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "order_detail")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
 public class OrderDetail {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_detail_id")
-    private Integer orderDetailId; // id -> orderDetailId 변경
+    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
@@ -32,15 +38,9 @@ public class OrderDetail {
     @Column(name = "size", length = 10)
     private String size;
 
-    @Column(name = "order_detail_price")
-    private Integer orderDetailPrice; // BigDecimal -> Integer
+    @Column(name = "order_detail_price", precision = 10, scale = 2)
+    private BigDecimal orderDetailPrice;
 
     @OneToMany(mappedBy = "orderDetail", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<OrderOption> orderOptions = new ArrayList<>();
-    
-    public void addOrderOption(OrderOption orderOption) {
-        this.orderOptions.add(orderOption);
-        orderOption.setOrderDetail(this);
-    }
+    private List<OrderOption> orderOptions=new ArrayList<>();
 }
