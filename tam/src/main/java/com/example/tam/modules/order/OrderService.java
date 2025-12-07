@@ -2,8 +2,6 @@ package com.example.tam.modules.order;
 
 import com.example.tam.common.entity.*;
 import com.example.tam.dto.OrderDto;
-import com.example.tam.modules.custom.CustomHeaderRepository;
-import com.example.tam.modules.menu.MenuOptionRepository;
 import com.example.tam.modules.menu.MenuRepository;
 import com.example.tam.modules.store.StoreRepository;
 import com.example.tam.exception.ResourceNotFoundException;
@@ -12,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,79 +26,80 @@ public class OrderService {
     private final OrderDetailRepository orderDetailRepository;
     private final OrderOptionRepository orderOptionRepository;
     private final MenuRepository menuRepository;
-    private final MenuOptionRepository menuOptionRepository;
     private final StoreRepository storeRepository;
-    private final CustomHeaderRepository customHeaderRepository;
 
     @Transactional
     public OrderDto.Response createOrder(Integer userId, OrderDto.CreateRequest request) {
         Store store = storeRepository.findById(request.getStoreId())
                 .orElseThrow(() -> new ResourceNotFoundException("매장을 찾을 수 없습니다."));
 
-        OrderHeader header = OrderHeader.builder()
-                .userId(userId)
-                .store(store) // [수정] storeId(int) 대신 store(Object) 객체 주입
-                .orderDatetime(LocalDateTime.now())
-                .orderDate(LocalDate.now())
-                .orderStatus("COMPLETED")
-                .waitingNum(100)
-                .totalPrice(0)
-                .build();
+        // [수정] @Builder 없음 -> new 객체 생성 및 Setter 사용
+        OrderHeader header = new OrderHeader();
+        header.setUserId(userId);
+        header.setStore(store);
+        header.setOrderDateTime(LocalDateTime.now());
+        header.setOrderDate(LocalDate.now());
+        
+        // [수정] COMPLETED 상태가 없음 -> PAID(결제완료)로 변경
+        header.setOrderState(OrderHeader.OrderState.PAID); 
+        
+        header.setWaitingNum(100);
+        header.setTotalPrice(BigDecimal.ZERO);
+        
         OrderHeader savedHeader = orderHeaderRepository.save(header);
 
-        int totalPrice = 0;
+        BigDecimal totalPrice = BigDecimal.ZERO;
 
         if (request.getItems() != null) {
             for (OrderDto.OrderItem item : request.getItems()) {
                 Menu menu = menuRepository.findById(item.getMenuId())
                         .orElseThrow(() -> new ResourceNotFoundException("메뉴 없음: " + item.getMenuId()));
 
-                int detailPrice = menu.getMenuPrice();
+                // [수정] getMenuPrice() -> getPrice()
+                BigDecimal detailPrice = menu.getPrice(); 
                 
-                OrderDetail detail = OrderDetail.builder()
-                        .orderHeader(savedHeader) // [수정] orderId(int) 대신 orderHeader(Object) 객체 주입
-                        .menu(menu)               // [수정] menuId(int) 대신 menu(Object) 객체 주입
-                        .quantity(item.getQuantity())
-                        .orderDetailPrice(0)
-                        .build();
+                // [수정] @Builder 없음 -> new 객체 생성
+                OrderDetail detail = new OrderDetail();
+                detail.setOrderHeader(savedHeader);
+                detail.setMenu(menu);
+                detail.setQuantity(item.getQuantity());
+                detail.setOrderDetailPrice(BigDecimal.ZERO);
+
                 OrderDetail savedDetail = orderDetailRepository.save(detail);
 
+                // 옵션 관련 로직은 엔티티 부재로 주석 처리됨
                 if (item.getOptions() != null) {
+                    /*
                     for (OrderDto.OptionDetail opt : item.getOptions()) {
-                        MenuOption menuOption = menuOptionRepository.findById(opt.getOptionId())
-                                .orElseThrow(() -> new ResourceNotFoundException("옵션 없음: " + opt.getOptionId()));
-                        
-                        OrderOption orderOption = OrderOption.builder()
-                                .orderDetail(savedDetail) // [수정] 객체 주입
-                                .optionId(menuOption.getOptionId()) // 호환성 필드 사용
-                                .extraNum(opt.getExtraNum())
-                                .extraPrice(menuOption.getExtraPrice())
-                                .build();
-                        orderOptionRepository.save(orderOption);
-
-                        detailPrice += (menuOption.getExtraPrice() * opt.getExtraNum());
+                         // 옵션 처리 로직...
                     }
+                    */
                 }
 
-                int itemTotalPrice = detailPrice * item.getQuantity();
+                // 가격 계산 (BigDecimal 연산)
+                BigDecimal itemQuantity = new BigDecimal(item.getQuantity());
+                BigDecimal itemTotalPrice = detailPrice.multiply(itemQuantity);
+                
                 savedDetail.setOrderDetailPrice(itemTotalPrice);
                 orderDetailRepository.save(savedDetail);
 
-                totalPrice += itemTotalPrice;
+                totalPrice = totalPrice.add(itemTotalPrice);
             }
         }
 
         savedHeader.setTotalPrice(totalPrice);
         orderHeaderRepository.save(savedHeader);
 
-        log.info("주문 생성 완료: OrderId={}, TotalPrice={}", savedHeader.getOrderId(), totalPrice);
+        // [수정] getOrderId() -> getId()
+        log.info("주문 생성 완료: OrderId={}, TotalPrice={}", savedHeader.getId(), totalPrice);
 
-        return getOrderDetail(userId, savedHeader.getOrderId());
+        return getOrderDetail(userId, savedHeader.getId());
     }
 
     @Transactional(readOnly = true)
     public List<OrderDto.Response> getAllOrders(Integer userId) {
-        List<OrderHeader> headers = orderHeaderRepository.findByUserIdOrderByOrderDatetimeDesc(userId);
+        // [수정] OrderDatetime -> OrderDateTime (메서드명 변경 반영)
+        List<OrderHeader> headers = orderHeaderRepository.findByUserIdOrderByOrderDateTimeDesc(userId);
         return headers.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -107,8 +107,9 @@ public class OrderService {
     public List<OrderDto.Response> getOrdersByDateRange(Integer userId, String fromDate, String toDate) {
         LocalDate start = LocalDate.parse(fromDate);
         LocalDate end = LocalDate.parse(toDate);
+        // [수정] OrderDatetime -> OrderDateTime (메서드명 변경 반영)
         List<OrderHeader> headers = orderHeaderRepository
-                .findByUserIdAndOrderDateBetweenOrderByOrderDatetimeDesc(userId, start, end);
+                .findByUserIdAndOrderDateBetweenOrderByOrderDateTimeDesc(userId, start, end);
         return headers.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -128,10 +129,10 @@ public class OrderService {
     }
 
     private OrderDto.Response mapToResponse(OrderHeader header) {
-        // store 객체에서 직접 이름 가져오기
-        String storeName = (header.getStore() != null) ? header.getStore().getStoreName() : "알 수 없는 매장";
+        String storeName = (header.getStore() != null) ? header.getStore().getName() : "알 수 없는 매장";
 
-        List<OrderDetail> details = orderDetailRepository.findByOrderId(header.getOrderId());
+        // [수정] getOrderId() -> getId()
+        List<OrderDetail> details = orderDetailRepository.findByOrderId(header.getId());
         List<OrderDto.OrderItemDetail> itemDtos = new ArrayList<>();
 
         int totalQuantity = 0;
@@ -142,28 +143,14 @@ public class OrderService {
 
             totalQuantity += detail.getQuantity();
 
-            List<OrderOption> options = orderOptionRepository.findByOrderDetailId(detail.getOrderDetailId());
-            List<OrderDto.OptionItemDetail> optionDtos = options.stream()
-                    .map(opt -> {
-                        MenuOption menuOption = null;
-                        if(opt.getOptionId() != null) {
-                             menuOption = menuOptionRepository.findById(opt.getOptionId()).orElse(null);
-                        }
-                        return OrderDto.OptionItemDetail.builder()
-                                .optionId(opt.getOptionId())
-                                .optionClass(menuOption != null ? menuOption.getOptionClass() : "기타")
-                                .optionName(menuOption != null ? menuOption.getOptionDetail() : "알수없음")
-                                .extraPrice(opt.getExtraPrice())
-                                .quantity(opt.getExtraNum())
-                                .build();
-                    })
-                    .collect(Collectors.toList());
+            List<OrderDto.OptionItemDetail> optionDtos = new ArrayList<>();
 
             itemDtos.add(OrderDto.OrderItemDetail.builder()
-                    .menuId(menu.getMenuId())
-                    .menuName(menu.getMenuName())
+                    // [수정] Menu의 getId() 확인
+                    .menuId(menu.getId()) 
+                    .menuName(menu.getName())
                     .quantity(detail.getQuantity())
-                    .price(detail.getOrderDetailPrice())
+                    .price(detail.getOrderDetailPrice().intValue())
                     .options(optionDtos)
                     .build());
         }
@@ -180,14 +167,16 @@ public class OrderService {
         }
 
         return OrderDto.Response.builder()
-                .orderId(header.getOrderId())
+                // [수정] getOrderId() -> getId()
+                .orderId(header.getId())
                 .userId(header.getUserId())
-                .storeId(header.getStore().getStoreId()) // 객체에서 ID 추출
+                .storeId(header.getStore().getId())
                 .storeName(storeName)
-                .orderDatetime(header.getOrderDatetime())
+                // [수정] getOrderDatetime() -> getOrderDateTime()
+                .orderDatetime(header.getOrderDateTime())
                 .waitingNum(header.getWaitingNum())
-                .totalPrice(header.getTotalPrice())
-                .orderStatus(header.getOrderStatus())
+                .totalPrice(header.getTotalPrice().intValue())
+                .orderStatus(header.getOrderState().toString())
                 .representativeMenuName(representativeName)
                 .totalQuantity(totalQuantity)
                 .items(itemDtos)

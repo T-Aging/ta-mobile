@@ -8,7 +8,10 @@ import java.util.List;
 
 @Repository
 public interface OrderHeaderRepository extends JpaRepository<OrderHeader, Integer> {
-    List<OrderHeader> findByUserIdOrderByOrderDatetimeDesc(Integer userId);
-    List<OrderHeader> findByUserIdAndOrderDateBetweenOrderByOrderDatetimeDesc(
+    // [수정] OrderDatetime -> OrderDateTime (대소문자 T 주의)
+    List<OrderHeader> findByUserIdOrderByOrderDateTimeDesc(Integer userId);
+    
+    // [수정] OrderDatetime -> OrderDateTime
+    List<OrderHeader> findByUserIdAndOrderDateBetweenOrderByOrderDateTimeDesc(
         Integer userId, LocalDate startDate, LocalDate endDate);
 }

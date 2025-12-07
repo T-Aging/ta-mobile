@@ -10,7 +10,8 @@ import java.util.List;
 @Repository
 public interface OrderOptionRepository extends JpaRepository<OrderOption, Integer> {
 
-    // [수정] orderDetail 객체 안의 orderDetailId를 찾도록 직접 쿼리 작성
-    @Query("SELECT oo FROM OrderOption oo WHERE oo.orderDetail.orderDetailId = :orderDetailId")
+    // [수정] oo.orderDetail.orderDetailId -> oo.orderDetail.id
+    // (OrderDetail 엔티티의 실제 필드명이 'id'입니다)
+    @Query("SELECT oo FROM OrderOption oo WHERE oo.orderDetail.id = :orderDetailId")
     List<OrderOption> findByOrderDetailId(@Param("orderDetailId") Integer orderDetailId);
 }

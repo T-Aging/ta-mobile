@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Collections; // 추가
 
 @RestController
 @RequestMapping("/t-age/users/{userid}/custom-menus")
@@ -28,8 +29,9 @@ public class CustomController {
             @Parameter(description = "검색어") @RequestParam(required = false) String keyword) {
         
         // Service 내부에서 keyword 유무에 따라 검색 로직 분기 처리 권장
-        List<CustomMenuDto.Response> menus = customService.getCustomMenus(userid, keyword);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 조회 성공", menus));
+        // List<CustomMenuDto.Response> menus = customService.getCustomMenus(userid, keyword);
+        // return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 조회 성공", menus));
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 조회 성공 (기능 비활성화됨)", Collections.emptyList()));
     }
 
     @Operation(summary = "커스텀 메뉴 상세 조회")
@@ -37,8 +39,9 @@ public class CustomController {
     public ResponseEntity<ApiResponse<CustomMenuDto.Response>> getCustomMenuDetail(
             @PathVariable Integer userid,
             @PathVariable Integer customId) {
-        CustomMenuDto.Response menu = customService.getCustomMenuDetail(userid, customId);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 상세 조회 성공", menu));
+        // CustomMenuDto.Response menu = customService.getCustomMenuDetail(userid, customId);
+        // return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 상세 조회 성공", menu));
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 상세 조회 성공 (기능 비활성화됨)", null));
     }
 
     @Operation(summary = "커스텀 메뉴 생성")
@@ -46,8 +49,9 @@ public class CustomController {
     public ResponseEntity<ApiResponse<CustomMenuDto.Response>> createCustomMenu(
             @PathVariable Integer userid,
             @Valid @RequestBody CustomMenuDto.CreateRequest request) {
-        CustomMenuDto.Response response = customService.createCustomMenu(userid, request);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 생성 성공", response));
+        // CustomMenuDto.Response response = customService.createCustomMenu(userid, request);
+        // return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 생성 성공", response));
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 생성 성공 (기능 비활성화됨)", null));
     }
 
     @Operation(summary = "커스텀 메뉴 수정")
@@ -57,9 +61,10 @@ public class CustomController {
             @PathVariable Integer customId,
             @Valid @RequestBody CustomMenuDto.UpdateRequest request) {
         // Path ID와 Body 데이터 일치 보장
-        request.setCustomId(customId); 
-        CustomMenuDto.Response response = customService.updateCustomMenu(userid, request);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 수정 성공", response));
+        // request.setCustomId(customId); 
+        // CustomMenuDto.Response response = customService.updateCustomMenu(userid, request);
+        // return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 수정 성공", response));
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 수정 성공 (기능 비활성화됨)", null));
     }
 
     @Operation(summary = "커스텀 메뉴 삭제")
@@ -67,7 +72,8 @@ public class CustomController {
     public ResponseEntity<ApiResponse<Void>> deleteCustomMenu(
             @PathVariable Integer userid,
             @PathVariable Integer customId) {
-        customService.deleteCustomMenu(userid, customId);
-        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 삭제 성공", null));
+        // customService.deleteCustomMenu(userid, customId);
+        // return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 삭제 성공", null));
+        return ResponseEntity.ok(ApiResponse.success("커스텀 메뉴 삭제 성공 (기능 비활성화됨)", null));
     }
 }

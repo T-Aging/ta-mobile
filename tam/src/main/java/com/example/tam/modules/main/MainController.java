@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
+
 @RestController
 @RequestMapping("/t-age/main")
 @RequiredArgsConstructor
@@ -20,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class MainController {
 
     private final UserService userService;
-    private final CustomService customService;
+    // private final CustomService customService; // 주석
     private final OrderService orderService;
     private final UserRepository userRepository;
 
@@ -36,9 +38,10 @@ public class MainController {
     @Operation(summary = "메인: 추천 커스텀 메뉴")
     @GetMapping("/custom")
     public ResponseEntity<ApiResponse<?>> getMainCustom(Authentication auth) {
-        Long userId = (auth != null) ? Long.parseLong(auth.getName()) : 1L;
-        var customMenus = customService.getAllCustomMenus(userId.intValue()); 
-        return ResponseEntity.ok(ApiResponse.success("메인 추천 메뉴 조회 성공", customMenus));
+        // Long userId = (auth != null) ? Long.parseLong(auth.getName()) : 1L;
+        // var customMenus = customService.getAllCustomMenus(userId.intValue()); 
+        // return ResponseEntity.ok(ApiResponse.success("메인 추천 메뉴 조회 성공", customMenus));
+        return ResponseEntity.ok(ApiResponse.success("메인 추천 메뉴 조회 성공 (기능 비활성화됨)", Collections.emptyList()));
     }
 
     @Operation(summary = "메인: 최근 주문 내역")

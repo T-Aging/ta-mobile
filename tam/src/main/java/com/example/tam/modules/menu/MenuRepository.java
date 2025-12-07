@@ -7,5 +7,7 @@ import java.util.List;
 
 @Repository
 public interface MenuRepository extends JpaRepository<Menu, Integer> {
-    List<Menu> findByMenuNameContaining(String keyword);
+    // [수정] findByMenuNameContaining -> findByNameContaining
+    // Menu 엔티티의 실제 필드명이 'name'이므로 메서드 이름도 그에 맞춰야 합니다.
+    List<Menu> findByNameContaining(String keyword);
 }

@@ -20,18 +20,14 @@ public class AuthService {
     private final KakaoRepository kakaoRepository;
     private final JwtUtil jwtUtil;
 
-    // [추가] 인가 코드로 로그인 (Mock)
     @Transactional
     public AuthDto.LoginResponse loginWithKakaoCode(String code) {
         log.info("인가 코드로 로그인 시도 (Mock): {}", code);
-        // 실제로는 카카오 API로 토큰을 받아야 하지만, 테스트용으로 바로 로그인 처리
         return loginWithKakao("mock_access_token_" + code); 
     }
 
-    // [추가] 리프레시 토큰 처리 (Mock)
     public AuthDto.LoginResponse refreshToken(AuthDto.TokenRefreshRequest request) {
         log.info("토큰 갱신 요청: {}", request.getRefreshToken());
-        // 테스트용: ID 1번 유저로 간주하고 새 토큰 발급
         String newToken = jwtUtil.generateToken(1L, "테스트유저");
         return AuthDto.LoginResponse.builder()
                 .accessToken(newToken)
@@ -42,7 +38,6 @@ public class AuthService {
 
     @Transactional
     public AuthDto.LoginResponse loginWithKakao(String accessToken) {
-        // 기존 코드 유지
         String kakaoId = "KAKAO_" + System.currentTimeMillis(); 
         String fetchedPhoneNumber = "010-1234-5678"; 
         
@@ -54,17 +49,22 @@ public class AuthService {
                             .build();
                     User savedUser = userRepository.save(newUser);
 
+                    // [수정] userId(Integer) -> user(User) 객체 주입
                     Kakao newKakao = Kakao.builder()
                             .kakaoId(kakaoId)
-                            .userId(savedUser.getUserId())
+                            .user(savedUser) 
                             .accessToken(accessToken)
                             .lastAccessDate(LocalDateTime.now())
                             .build();
                     return kakaoRepository.save(newKakao);
                 });
 
-        User user = userRepository.findById(kakao.getUserId())
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+        // [수정] kakao.getUserId() -> kakao.getUser().getUserId()
+        // Kakao 엔티티는 User 객체를 참조하고 있으므로 getter를 통해 접근해야 함
+        User user = kakao.getUser(); 
+        if (user == null) {
+             throw new RuntimeException("사용자를 찾을 수 없습니다");
+        }
         
         String token = jwtUtil.generateToken(Long.valueOf(user.getUserId()), user.getUsername());
         String refreshToken = jwtUtil.generateRefreshToken(Long.valueOf(user.getUserId()));
@@ -81,15 +81,12 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthDto.LoginResponse loginByQrCode(String qrCode) {
-        // 1. DB에서 QR 코드(예: "QR_7")를 가진 유저 찾기
         User user = userRepository.findByUserQr(qrCode)
                 .orElseThrow(() -> new RuntimeException("유효하지 않은 QR 코드입니다."));
 
-        // 2. 찾은 유저 정보로 토큰 생성
         String token = jwtUtil.generateToken(Long.valueOf(user.getUserId()), user.getUsername());
         String refreshToken = jwtUtil.generateRefreshToken(Long.valueOf(user.getUserId()));
 
-        // 3. 응답 반환
         return AuthDto.LoginResponse.builder()
                 .userId(Long.valueOf(user.getUserId()))
                 .username(user.getUsername())

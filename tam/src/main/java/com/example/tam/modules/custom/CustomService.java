@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -18,16 +19,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CustomService {
 
-    private final CustomHeaderRepository customHeaderRepository;
-    private final CustomDetailRepository customDetailRepository;
+    // private final CustomHeaderRepository customHeaderRepository;
+    // private final CustomDetailRepository customDetailRepository;
     private final MenuRepository menuRepository;
-    private final MenuOptionRepository menuOptionRepository;
+    // private final MenuOptionRepository menuOptionRepository;
 
-    /**
-     * 커스텀 메뉴 목록 조회 (진짜 DB 조회)
-     */
+    
     @Transactional(readOnly = true)
     public List<CustomMenuDto.Response> getCustomMenus(Integer userId, String keyword) {
+        /*
         // 1. 사용자 ID로 저장된 커스텀 헤더(껍데기) 조회
         List<CustomHeader> headers = customHeaderRepository.findByUserIdOrderByCustomIdDesc(userId);
 
@@ -69,20 +69,24 @@ public class CustomService {
                     .options(optionDtos)
                     .build();
         }).collect(Collectors.toList());
+        */
+        return Collections.emptyList();
     }
 
     // 커스텀 메뉴 상세 조회
     @Transactional(readOnly = true)
     public CustomMenuDto.Response getCustomMenuDetail(Integer userId, Integer customId) {
-        return getCustomMenus(userId, null).stream()
-                .filter(m -> m.getCustomId().equals(customId))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("커스텀 메뉴를 찾을 수 없습니다."));
+        // return getCustomMenus(userId, null).stream()
+        //         .filter(m -> m.getCustomId().equals(customId))
+        //         .findFirst()
+        //         .orElseThrow(() -> new RuntimeException("커스텀 메뉴를 찾을 수 없습니다."));
+        return null;
     }
 
     // 커스텀 메뉴 생성 (진짜 DB 저장)
     @Transactional
     public CustomMenuDto.Response createCustomMenu(Integer userId, CustomMenuDto.CreateRequest request) {
+        /*
         // 1. 헤더(이름, 메뉴ID) 저장
         CustomHeader header = CustomHeader.builder()
                 .userId(userId)
@@ -107,11 +111,14 @@ public class CustomService {
         
         // 3. 저장된 정보로 다시 조회해서 반환
         return getCustomMenuDetail(userId, savedHeader.getCustomId());
+        */
+        return null;
     }
 
     // 커스텀 메뉴 수정
     @Transactional
     public CustomMenuDto.Response updateCustomMenu(Integer userId, CustomMenuDto.UpdateRequest request) {
+        /*
         // 1. 기존 데이터 삭제 (단순화를 위해 삭제 후 재생성 전략 사용)
         deleteCustomMenu(userId, request.getCustomId());
 
@@ -125,11 +132,14 @@ public class CustomService {
         // *주의: 실제 수정 시에는 header의 menuId를 유지해야 합니다.
         // 현재는 간단히 구현했습니다.
         return createCustomMenu(userId, createReq);
+        */
+        return null;
     }
 
     // 커스텀 메뉴 삭제
     @Transactional
     public void deleteCustomMenu(Integer userId, Integer customId) {
+        /*
         CustomHeader header = customHeaderRepository.findById(customId)
                 .orElseThrow(() -> new RuntimeException("메뉴가 존재하지 않습니다."));
         
@@ -141,6 +151,7 @@ public class CustomService {
         List<CustomDetail> details = customDetailRepository.findByCustomId(customId);
         customDetailRepository.deleteAll(details);
         customHeaderRepository.delete(header);
+        */
     }
     
     // 전체 조회 (단순 껍데기 - 필요시 구현)

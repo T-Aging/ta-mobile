@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Collections; // 추가
 
 @RestController
 @RequestMapping("/t-age/users/{userid}/notifications")
@@ -25,13 +26,14 @@ public class PushController {
             @PathVariable Integer userid,
             @Parameter(description = "알림 타입") @RequestParam(required = false) String type) {
         
-        List<PushDto.Response> response;
-        if (type != null && !type.isEmpty()) {
-            response = pushService.getPushHistoryByType(userid, type);
-        } else {
-            response = pushService.getAllPushHistory(userid);
-        }
+        // List<PushDto.Response> response;
+        // if (type != null && !type.isEmpty()) {
+        //     response = pushService.getPushHistoryByType(userid, type);
+        // } else {
+        //     response = pushService.getAllPushHistory(userid);
+        // }
         
-        return ResponseEntity.ok(ApiResponse.success("알림 조회 성공", response));
+        // return ResponseEntity.ok(ApiResponse.success("알림 조회 성공", response));
+        return ResponseEntity.ok(ApiResponse.success("알림 조회 성공 (기능 비활성화됨)", Collections.emptyList()));
     }
 }

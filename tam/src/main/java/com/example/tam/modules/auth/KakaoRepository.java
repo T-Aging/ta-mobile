@@ -7,5 +7,7 @@ import java.util.Optional;
 
 @Repository
 public interface KakaoRepository extends JpaRepository<Kakao, String> {
-    Optional<Kakao> findByUserId(Integer userId);
+    // [수정] findByUserId -> findByUserUserId
+    // (Kakao.user 객체 안의 User.userId 필드를 찾도록 명시)
+    Optional<Kakao> findByUserUserId(Integer userId);
 }
