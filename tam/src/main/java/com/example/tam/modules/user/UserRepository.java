@@ -9,4 +9,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByUsername(String username);
     Optional<User> findByPhoneNumber(String phoneNumber);
+    
+    // [추가] QR 코드로 사용자 찾기
+    Optional<User> findByUserQr(String userQr);
 }

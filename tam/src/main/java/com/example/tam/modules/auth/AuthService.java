@@ -81,10 +81,23 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthDto.LoginResponse loginByQrCode(String qrCode) {
-        // 기존 코드 유지 (findByUserQr 메소드가 UserRepository에 있어야 함)
-        // 임시로 1번 유저 리턴
-        String token = jwtUtil.generateToken(1L, "QR유저");
-        return AuthDto.LoginResponse.builder().accessToken(token).userId(1L).build();
+        // 1. DB에서 QR 코드(예: "QR_7")를 가진 유저 찾기
+        User user = userRepository.findByUserQr(qrCode)
+                .orElseThrow(() -> new RuntimeException("유효하지 않은 QR 코드입니다."));
+
+        // 2. 찾은 유저 정보로 토큰 생성
+        String token = jwtUtil.generateToken(Long.valueOf(user.getUserId()), user.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(Long.valueOf(user.getUserId()));
+
+        // 3. 응답 반환
+        return AuthDto.LoginResponse.builder()
+                .userId(Long.valueOf(user.getUserId()))
+                .username(user.getUsername())
+                .accessToken(token)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(jwtUtil.getExpirationTime())
+                .build();
     }
 
     public void logout(Integer userId) {
