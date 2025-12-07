@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,9 +29,7 @@ public class OrderService {
     private final MenuRepository menuRepository;
     private final MenuOptionRepository menuOptionRepository;
     private final StoreRepository storeRepository;
-    
-    // [추가] 커스텀 메뉴 등록을 위해 필요
-    private final CustomHeaderRepository customHeaderRepository; 
+    private final CustomHeaderRepository customHeaderRepository;
 
     /**
      * 주문 생성 (DB 저장)
@@ -157,7 +154,7 @@ public class OrderService {
      */
     @Transactional
     public void createCustomMenuFromOrder(Integer userId, Integer orderId, String customName) {
-        // ... (필요 시 구현, 현재는 로직 생략)
+        // 로직 생략 (필요 시 구현)
         log.info("주문 기반 커스텀 생성 요청: OrderId={}, Name={}", orderId, customName);
     }
 
@@ -171,17 +168,27 @@ public class OrderService {
         List<OrderDetail> details = orderDetailRepository.findByOrderId(header.getOrderId());
         List<OrderDto.OrderItemDetail> itemDtos = new ArrayList<>();
 
+        int totalQuantity = 0; // 총 개수 계산용
+
         for (OrderDetail detail : details) {
             Menu menu = menuRepository.findById(detail.getMenuId()).orElse(null);
             if (menu == null) continue;
 
-            // 옵션 조회
+            totalQuantity += detail.getQuantity();
+
+            // 옵션 조회 및 변환 (카테고리 포함)
             List<OrderOption> options = orderOptionRepository.findByOrderDetailId(detail.getOrderDetailId());
-            List<OrderDto.OptionDetail> optionDtos = options.stream()
-                    .map(opt -> OrderDto.OptionDetail.builder()
-                            .optionId(opt.getOptionId())
-                            .extraNum(opt.getExtraNum())
-                            .build())
+            List<OrderDto.OptionItemDetail> optionDtos = options.stream()
+                    .map(opt -> {
+                        MenuOption menuOption = menuOptionRepository.findById(opt.getOptionId()).orElse(null);
+                        return OrderDto.OptionItemDetail.builder()
+                                .optionId(opt.getOptionId())
+                                .optionClass(menuOption != null ? menuOption.getOptionClass() : "기타") // 카테고리 (사이즈, 온도 등)
+                                .optionName(menuOption != null ? menuOption.getOptionDetail() : "알수없음") // 옵션명 (톨, 아이스 등)
+                                .extraPrice(menuOption != null ? menuOption.getExtraPrice() : 0)
+                                .quantity(opt.getExtraNum())
+                                .build();
+                    })
                     .collect(Collectors.toList());
 
             itemDtos.add(OrderDto.OrderItemDetail.builder()
@@ -193,6 +200,18 @@ public class OrderService {
                     .build());
         }
 
+        // 대표 메뉴명 만들기 (예: "아메리카노 외 2건")
+        String representativeName = "";
+        if (!itemDtos.isEmpty()) {
+            String firstMenuName = itemDtos.get(0).getMenuName();
+            int otherCount = itemDtos.size() - 1;
+            if (otherCount > 0) {
+                representativeName = firstMenuName + " 외 " + otherCount + "건";
+            } else {
+                representativeName = firstMenuName;
+            }
+        }
+
         return OrderDto.Response.builder()
                 .orderId(header.getOrderId())
                 .userId(header.getUserId())
@@ -202,6 +221,8 @@ public class OrderService {
                 .waitingNum(header.getWaitingNum())
                 .totalPrice(header.getTotalPrice())
                 .orderStatus(header.getOrderStatus())
+                .representativeMenuName(representativeName) // [추가]
+                .totalQuantity(totalQuantity)               // [추가]
                 .items(itemDtos)
                 .build();
     }
