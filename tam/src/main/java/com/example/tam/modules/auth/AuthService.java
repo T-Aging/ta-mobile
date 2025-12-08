@@ -5,10 +5,21 @@ import com.example.tam.common.entity.Kakao;
 import com.example.tam.dto.AuthDto;
 import com.example.tam.modules.user.UserRepository;
 import com.example.tam.security.JwtUtil;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -20,40 +31,52 @@ public class AuthService {
     private final KakaoRepository kakaoRepository;
     private final JwtUtil jwtUtil;
 
-    // [추가] 인가 코드로 로그인 (Mock)
+    @Value("${spring.security.oauth2.client.registration.kakao.client-id}")
+    private String kakaoClientId;
+
+    @Value("${spring.security.oauth2.client.registration.kakao.redirect-uri}")
+    private String kakaoRedirectUri;
+
+    /**
+     * [핵심] 인가 코드(qsh...)를 받아서 -> 액세스 토큰으로 교환 -> 로그인 진행
+     */
     @Transactional
     public AuthDto.LoginResponse loginWithKakaoCode(String code) {
-        log.info("인가 코드로 로그인 시도 (Mock): {}", code);
-        // 실제로는 카카오 API로 토큰을 받아야 하지만, 테스트용으로 바로 로그인 처리
-        return loginWithKakao("mock_access_token_" + code); 
+        // 1. 인가 코드로 카카오에서 "진짜 액세스 토큰" 받아오기
+        String realAccessToken = getAccessTokenFromKakao(code);
+        log.info("카카오 액세스 토큰 발급 성공: {}", realAccessToken);
+        
+        // 2. 받아온 토큰으로 로그인 로직 수행
+        return loginWithKakao(realAccessToken);
     }
 
-    // [추가] 리프레시 토큰 처리 (Mock)
-    public AuthDto.LoginResponse refreshToken(AuthDto.TokenRefreshRequest request) {
-        log.info("토큰 갱신 요청: {}", request.getRefreshToken());
-        // 테스트용: ID 1번 유저로 간주하고 새 토큰 발급
-        String newToken = jwtUtil.generateToken(1L, "테스트유저");
-        return AuthDto.LoginResponse.builder()
-                .accessToken(newToken)
-                .refreshToken(request.getRefreshToken())
-                .userId(1L)
-                .build();
-    }
-
+    /**
+     * 카카오 액세스 토큰으로 로그인 (사용자 정보 조회 및 DB 저장)
+     */
     @Transactional
     public AuthDto.LoginResponse loginWithKakao(String accessToken) {
-        // 기존 코드 유지
-        String kakaoId = "KAKAO_" + System.currentTimeMillis(); 
-        String fetchedPhoneNumber = "010-1234-5678"; 
+        // 1. 카카오 API 호출하여 사용자 정보 가져오기
+        JsonNode kakaoUserInfo = getKakaoUserInfo(accessToken);
         
+        // 2. ID 및 정보 추출
+        String kakaoId = kakaoUserInfo.get("id").asText();
+        JsonNode properties = kakaoUserInfo.path("properties");
+        JsonNode kakaoAccount = kakaoUserInfo.path("kakao_account");
+        
+        String nickname = properties.path("nickname").asText("Unknown User");
+        // 이메일 등 추가 정보가 필요하면 여기서 kakaoAccount.path("email") 등으로 추출
+        
+        // 3. DB 조회 또는 회원가입
         Kakao kakao = kakaoRepository.findById(kakaoId)
                 .orElseGet(() -> {
+                    // 새 유저 생성
                     User newUser = User.builder()
-                            .username("사용자" + kakaoId.substring(6, 10))
-                            .phoneNumber(fetchedPhoneNumber)
+                            .username(nickname)
+                            .phoneNumber(null) 
                             .build();
                     User savedUser = userRepository.save(newUser);
 
+                    // 카카오 연동 정보 저장
                     Kakao newKakao = Kakao.builder()
                             .kakaoId(kakaoId)
                             .userId(savedUser.getUserId())
@@ -63,6 +86,7 @@ public class AuthService {
                     return kakaoRepository.save(newKakao);
                 });
 
+        // 4. JWT 토큰 발급
         User user = userRepository.findById(kakao.getUserId())
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
         
@@ -79,17 +103,80 @@ public class AuthService {
                 .build();
     }
 
+    // [추가된 메서드] 인가 코드를 액세스 토큰으로 바꾸는 기능
+    private String getAccessTokenFromKakao(String code) {
+        RestTemplate rt = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("grant_type", "authorization_code");
+        params.add("client_id", kakaoClientId);
+        params.add("redirect_uri", kakaoRedirectUri); // http://localhost:8080/t-age/login/oauth2/code/kakao
+        params.add("code", code); // 여기에 qsh... 코드가 들어갑니다
+
+        HttpEntity<MultiValueMap<String, String>> kakaoTokenRequest = new HttpEntity<>(params, headers);
+
+        try {
+            ResponseEntity<String> response = rt.exchange(
+                    "https://kauth.kakao.com/oauth/token",
+                    HttpMethod.POST,
+                    kakaoTokenRequest,
+                    String.class
+            );
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(response.getBody());
+            return jsonNode.get("access_token").asText();
+        } catch (Exception e) {
+            log.error("토큰 발급 실패: {}", e.getMessage());
+            throw new RuntimeException("카카오 토큰 발급 실패. 인가 코드가 만료되었거나 리다이렉트 URI가 일치하지 않습니다.");
+        }
+    }
+
+    // 사용자 정보 가져오기
+    private JsonNode getKakaoUserInfo(String accessToken) {
+        RestTemplate rt = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + accessToken);
+        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
+
+        HttpEntity<MultiValueMap<String, String>> kakaoProfileRequest = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = rt.exchange(
+                    "https://kapi.kakao.com/v2/user/me",
+                    HttpMethod.POST,
+                    kakaoProfileRequest,
+                    String.class
+            );
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readTree(response.getBody());
+        } catch (Exception e) {
+            throw new RuntimeException("카카오 사용자 정보 조회 실패: " + e.getMessage());
+        }
+    }
+    
+    // 리프레시 토큰 (기존 유지)
+    public AuthDto.LoginResponse refreshToken(AuthDto.TokenRefreshRequest request) {
+        String newToken = jwtUtil.generateToken(1L, "테스트유저");
+        return AuthDto.LoginResponse.builder()
+                .accessToken(newToken)
+                .refreshToken(request.getRefreshToken())
+                .userId(1L)
+                .build();
+    }
+    
+    // QR 로그인 (기존 유지)
     @Transactional(readOnly = true)
     public AuthDto.LoginResponse loginByQrCode(String qrCode) {
-        // 1. DB에서 QR 코드(예: "QR_7")를 가진 유저 찾기
         User user = userRepository.findByUserQr(qrCode)
                 .orElseThrow(() -> new RuntimeException("유효하지 않은 QR 코드입니다."));
 
-        // 2. 찾은 유저 정보로 토큰 생성
         String token = jwtUtil.generateToken(Long.valueOf(user.getUserId()), user.getUsername());
         String refreshToken = jwtUtil.generateRefreshToken(Long.valueOf(user.getUserId()));
 
-        // 3. 응답 반환
         return AuthDto.LoginResponse.builder()
                 .userId(Long.valueOf(user.getUserId()))
                 .username(user.getUsername())
@@ -99,8 +186,8 @@ public class AuthService {
                 .expiresIn(jwtUtil.getExpirationTime())
                 .build();
     }
-
+    
     public void logout(Integer userId) {
-        log.info("로그아웃 - userId: {}", userId);
+        // 로그아웃 로직
     }
 }
