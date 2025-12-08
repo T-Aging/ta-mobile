@@ -40,4 +40,14 @@ public class AuthDto {
         @NotBlank
         private String refreshToken;
     }
+
+    @Getter
+    @NoArgsConstructor
+    public static class PhoneLoginRequest {
+        
+        private String name; // 이름 (선택 혹은 필수)
+
+        @NotBlank(message = "전화번호는 필수입니다.") // 빈 값이 오면 에러 발생
+        private String phoneNumber;
+    }
 }

@@ -54,6 +54,12 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("로그인 성공", response));
     }
 
+    @PostMapping("/phone")
+    public ResponseEntity<AuthDto.LoginResponse> phoneLogin(@RequestBody AuthDto.PhoneLoginRequest request) {
+        // 방금 만든 서비스 메서드 호출
+        return ResponseEntity.ok(authService.loginOrRegisterByPhone(request));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthDto.LoginResponse>> refreshToken(
             @Valid @RequestBody AuthDto.TokenRefreshRequest request) {

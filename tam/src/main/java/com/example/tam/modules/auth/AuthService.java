@@ -36,7 +36,42 @@ public class AuthService {
 
     @Value("${spring.security.oauth2.client.registration.kakao.redirect-uri}")
     private String kakaoRedirectUri;
+        @Transactional
+        public AuthDto.LoginResponse loginOrRegisterByPhone(AuthDto.PhoneLoginRequest request) {
+                
+                // 1. 전화번호 하이픈 제거 (선택 사항: 010-1234-5678 -> 01012345678)
+                String cleanPhone = request.getPhoneNumber().replaceAll("-", "").trim();
 
+                // 2. DB 조회 (있으면 가져오고, 없으면 새로 생성)
+                User user = userRepository.findByPhoneNumber(cleanPhone)
+                        .orElseGet(() -> {
+                        // 신규 회원가입 로직
+                        log.info("새로운 전화번호 회원 가입: {}", cleanPhone);
+                        User newUser = User.builder()
+                                .username(request.getName()) // 요청받은 이름 사용
+                                .phoneNumber(cleanPhone)
+                                .build();
+                        return userRepository.save(newUser);
+                        });
+
+                // 3. (옵션) 기존 회원인데 이름이 바뀌었을 경우 업데이트 하려면 여기에 로직 추가
+                // if (!user.getUsername().equals(request.getName())) { ... }
+
+                // 4. JWT 토큰 발급 (기존 로직 활용)
+                // User Entity의 ID 타입에 따라 Long.valueOf 필요 여부 확인 (기존 코드 따름)
+                String token = jwtUtil.generateToken(Long.valueOf(user.getUserId()), user.getUsername());
+                String refreshToken = jwtUtil.generateRefreshToken(Long.valueOf(user.getUserId()));
+
+                // 5. 응답 반환
+                return AuthDto.LoginResponse.builder()
+                        .userId(Long.valueOf(user.getUserId()))
+                        .username(user.getUsername())
+                        .accessToken(token)
+                        .refreshToken(refreshToken)
+                        .tokenType("Bearer")
+                        .expiresIn(jwtUtil.getExpirationTime())
+                        .build();
+        }
     /**
      * [핵심] 인가 코드(qsh...)를 받아서 -> 액세스 토큰으로 교환 -> 로그인 진행
      */
@@ -135,28 +170,27 @@ public class AuthService {
     }
 
     // 사용자 정보 가져오기
-    private JsonNode getKakaoUserInfo(String accessToken) {
+   private JsonNode getKakaoUserInfo(String accessToken) {
         RestTemplate rt = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer " + accessToken);
-        headers.add("Content-type", "application/x-www-form-urlencoded;charset=utf-8");
 
-        HttpEntity<MultiValueMap<String, String>> kakaoProfileRequest = new HttpEntity<>(headers);
+        HttpEntity<Void> entity = new HttpEntity<>(null, headers);
 
         try {
-            ResponseEntity<String> response = rt.exchange(
-                    "https://kapi.kakao.com/v2/user/me",
-                    HttpMethod.POST,
-                    kakaoProfileRequest,
-                    String.class
-            );
+                ResponseEntity<String> response = rt.exchange(
+                        "https://kapi.kakao.com/v2/user/me",
+                        HttpMethod.GET,      // GET 권장
+                        entity,
+                        String.class
+                );
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readTree(response.getBody());
+                ObjectMapper objectMapper = new ObjectMapper();
+                return objectMapper.readTree(response.getBody());
         } catch (Exception e) {
-            throw new RuntimeException("카카오 사용자 정보 조회 실패: " + e.getMessage());
-        }
+                throw new RuntimeException("카카오 사용자 정보 조회 실패: " + e.getMessage());
     }
+}
     
     // 리프레시 토큰 (기존 유지)
     public AuthDto.LoginResponse refreshToken(AuthDto.TokenRefreshRequest request) {
