@@ -1,4 +1,4 @@
-package com.example.tam.modules.kiosklogin.dto;
+package com.example.tam.modules.kiosklogin.dto.phone;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
