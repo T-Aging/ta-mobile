@@ -67,6 +67,7 @@ public class UserController {
             return ResponseEntity.internalServerError().body(ApiResponse.error("QR 생성 실패"));
         }
     }
+    
     @Operation(summary = "전화번호 추가 등록 (카카오 로그인 후)", description = "비어있는 전화번호와 이름을 등록합니다.")
     @PostMapping("/phone")
     public ResponseEntity<ApiResponse<Map<String, Object>>> registerPhone(
