@@ -5,8 +5,10 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 import com.example.tam.common.entity.User;
-import com.example.tam.modules.kiosklogin.dto.KioskPhoneNumLoginCentRequest;
-import com.example.tam.modules.kiosklogin.dto.KioskPhoneNumLoginCentResponse;
+import com.example.tam.modules.kiosklogin.dto.phone.KioskPhoneNumLoginCentRequest;
+import com.example.tam.modules.kiosklogin.dto.phone.KioskPhoneNumLoginCentResponse;
+import com.example.tam.modules.kiosklogin.dto.qr.KioskQrLoginCentRequest;
+import com.example.tam.modules.kiosklogin.dto.qr.KioskQrLoginCentResponse;
 import com.example.tam.modules.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -55,5 +57,35 @@ public class KioskInterAuthService {
         if(digits.length() <7) return phone;
 
         return digits.substring(0,3) + "-****-" + digits.substring(digits.length() - 4);
+    }
+
+    public KioskQrLoginCentResponse loginByQr(KioskQrLoginCentRequest request){
+        String qrCode=request.getQrCode();
+
+        if(qrCode == null || qrCode.isBlank()){
+            return KioskQrLoginCentResponse.builder()
+            .login_success(false)
+            .message("INVALID_QR_CODE")
+            .build();
+        }
+
+        Optional<User> userOption = userRepository.findByUserQr(qrCode);
+
+        if(userOption.isEmpty()){
+            return KioskQrLoginCentResponse.builder()
+            .login_success(false)
+            .message("NOT_FOUND")
+            .build();
+        }
+
+        User user = userOption.get();
+
+
+        return KioskQrLoginCentResponse.builder()
+                .login_success(true)
+                .message("SUCCESS")
+                .userId(user.getUserId())
+                .username(user.getUsername())
+                .build();
     }
 }

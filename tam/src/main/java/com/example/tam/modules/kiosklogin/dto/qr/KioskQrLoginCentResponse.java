@@ -1,4 +1,4 @@
-package com.example.tam.modules.kiosklogin.dto;
+package com.example.tam.modules.kiosklogin.dto.qr;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class KioskPhoneNumLoginCentResponse {
+public class KioskQrLoginCentResponse {
     private boolean login_success;
 
     private String message;
@@ -17,6 +17,4 @@ public class KioskPhoneNumLoginCentResponse {
     private Integer userId;
     
     private String username;
-    
-    private String maskedPhone;
 }
