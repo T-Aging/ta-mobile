@@ -87,8 +87,12 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
 
-        // 1. 전화번호 업데이트
-        user.setPhoneNumber(request.getPhoneNumber());
+        // 1. 전화번호 업데이트 (하이픈 제거 로직 추가)
+        String rawPhone = request.getPhoneNumber();
+        if (rawPhone != null) {
+            String cleanPhone = rawPhone.replaceAll("-", "").trim();
+            user.setPhoneNumber(cleanPhone);
+        }
 
         // 2. 이름 업데이트 (입력된 경우에만)
         if (request.getName() != null && !request.getName().isBlank()) {
