@@ -84,7 +84,7 @@ public class AuthService {
         // 2. 받아온 토큰으로 로그인 로직 수행
         return loginWithKakao(realAccessToken);
     }
-
+    
     /**
      * 카카오 액세스 토큰으로 로그인 (사용자 정보 조회 및 DB 저장)
      */
@@ -220,7 +220,26 @@ public class AuthService {
                 .expiresIn(jwtUtil.getExpirationTime())
                 .build();
     }
-    
+    public void unlinkKakao(String accessToken) {
+        RestTemplate rt = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + accessToken);
+
+        HttpEntity<Void> entity = new HttpEntity<>(null, headers);
+
+        try {
+            ResponseEntity<String> response = rt.exchange(
+                    "https://kapi.kakao.com/v1/user/unlink",
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+            log.info("카카오 연결 끊기 성공. 응답 ID: {}", response.getBody());
+        } catch (Exception e) {
+            // 토큰 만료 등으로 실패할 수 있으나, 서비스 탈퇴는 계속 진행되어야 하므로 로그만 남김
+            log.error("카카오 연결 끊기 실패 (토큰 만료 가능성 있음): {}", e.getMessage());
+        }
+    }
     public void logout(Integer userId) {
         // 로그아웃 로직
     }
