@@ -10,8 +10,8 @@ public class AuthDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class KakaoLoginRequest {
-        @NotBlank(message = "카카오 액세스 토큰은 필수입니다")
-        private String accessToken;
+        @NotBlank(message = "카카오 인가 코드는 필수입니다")
+        private String authorizationCode;
     }
 
     @Getter

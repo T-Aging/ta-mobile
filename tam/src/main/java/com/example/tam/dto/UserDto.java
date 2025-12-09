@@ -36,4 +36,16 @@ public class UserDto {
                  message = "올바른 전화번호 형식이 아닙니다")
         private String phone;
     }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PhoneRegisterRequest {
+        private String name; // 이름 (선택 혹은 필수)
+        
+        @Pattern(regexp = "^01[0-9]-?[0-9]{4}-?[0-9]{4}$", 
+                 message = "올바른 전화번호 형식이 아닙니다 (예: 010-1234-5678)")
+        private String phoneNumber;
+    }
 }

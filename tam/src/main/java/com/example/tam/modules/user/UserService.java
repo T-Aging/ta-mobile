@@ -2,6 +2,8 @@ package com.example.tam.modules.user;
 
 import com.example.tam.common.entity.User;
 import com.example.tam.dto.UserDto;
+// ▼▼▼ [이 줄을 추가해야 에러가 해결됩니다!] ▼▼▼
+import com.example.tam.exception.ResourceNotFoundException; 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,12 +19,13 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDto.UserResponse getUserInfo(Integer userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+                // 여기서 ResourceNotFoundException을 쓰려면 위에서 import가 되어 있어야 합니다.
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
         
         return UserDto.UserResponse.builder()
                 .id(Long.valueOf(user.getUserId()))
                 .username(user.getUsername())
-                .email(null)
+                .email(null) // 이메일 필드가 Entity에 없으면 null 처리
                 .phone(user.getPhoneNumber())
                 .profileImageUrl(user.getProfileImage())
                 .createdAt(user.getSignupDate())
@@ -33,7 +36,7 @@ public class UserService {
     @Transactional
     public UserDto.UserResponse updateUserInfo(Integer userId, UserDto.UserUpdateRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
         
         if (request.getUsername() != null) user.setUsername(request.getUsername());
         if (request.getPhone() != null) user.setPhoneNumber(request.getPhone());
@@ -52,7 +55,7 @@ public class UserService {
 
     public String getUserQr(Integer userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
         
         if (user.getUserQr() == null) {
             user.setUserQr("QR_" + userId);
@@ -60,5 +63,24 @@ public class UserService {
         }
         
         return user.getUserQr();
+    }
+
+    // [추가된 메서드] 전화번호 등록
+    @Transactional
+    public Integer registerPhone(Integer userId, UserDto.PhoneRegisterRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다"));
+
+        // 1. 전화번호 업데이트
+        user.setPhoneNumber(request.getPhoneNumber());
+
+        // 2. 이름 업데이트 (입력된 경우에만)
+        if (request.getName() != null && !request.getName().isBlank()) {
+            user.setUsername(request.getName());
+        }
+        
+        userRepository.save(user);
+
+        return user.getUserId();
     }
 }

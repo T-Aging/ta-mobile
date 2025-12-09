@@ -50,13 +50,15 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthDto.LoginResponse>> loginWithKakao(
             @Valid @RequestBody AuthDto.KakaoLoginRequest request) {
-        AuthDto.LoginResponse response = authService.loginWithKakao(request.getAccessToken());
+        
+        // request.getAuthorizationCode()를 사용하여 서비스의 코드 로그인 로직 호출
+        AuthDto.LoginResponse response = authService.loginWithKakaoCode(request.getAuthorizationCode());
+        
         return ResponseEntity.ok(ApiResponse.success("로그인 성공", response));
     }
 
     @PostMapping("/phone")
     public ResponseEntity<AuthDto.LoginResponse> phoneLogin(@RequestBody AuthDto.PhoneLoginRequest request) {
-        // 방금 만든 서비스 메서드 호출
         return ResponseEntity.ok(authService.loginOrRegisterByPhone(request));
     }
 

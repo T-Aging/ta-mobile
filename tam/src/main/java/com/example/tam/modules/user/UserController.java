@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/t-age/users/{userid}")
@@ -65,5 +66,18 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(ApiResponse.error("QR 생성 실패"));
         }
+    }
+    @Operation(summary = "전화번호 추가 등록 (카카오 로그인 후)", description = "비어있는 전화번호와 이름을 등록합니다.")
+    @PostMapping("/phone")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> registerPhone(
+            @PathVariable Integer userid,
+            @Valid @RequestBody UserDto.PhoneRegisterRequest request) {
+        
+        Integer updatedUserId = userService.registerPhone(userid, request);
+        
+        // 응답 데이터 생성: { "userId": 7 }
+        Map<String, Object> data = Map.of("userId", updatedUserId);
+        
+        return ResponseEntity.ok(ApiResponse.success("전화번호 등록 성공", data));
     }
 }
