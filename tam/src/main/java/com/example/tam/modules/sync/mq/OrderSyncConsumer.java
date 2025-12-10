@@ -1,14 +1,20 @@
 package com.example.tam.modules.sync.mq;
 
+import java.lang.StackWalker.Option;
+
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
 import com.example.tam.common.entity.Menu;
+import com.example.tam.common.entity.OptionGroup;
+import com.example.tam.common.entity.OptionValue;
 import com.example.tam.common.entity.OrderDetail;
 import com.example.tam.common.entity.OrderHeader;
 import com.example.tam.common.entity.OrderOption;
 import com.example.tam.common.entity.Store;
 import com.example.tam.modules.menu.MenuRepository;
+import com.example.tam.modules.option.repository.OptionGroupRepository;
+import com.example.tam.modules.option.repository.OptionValueRepository;
 import com.example.tam.modules.order.OrderHeaderRepository;
 import com.example.tam.modules.store.StoreRepository;
 import com.example.tam.modules.sync.dto.OrderDetailSyncMessage;
@@ -27,6 +33,9 @@ public class OrderSyncConsumer {
     private final OrderHeaderRepository orderHeaderRepository;
     private final StoreRepository storeRepository;
     private final MenuRepository menuRepository;
+
+    private final OptionGroupRepository optionGroupRepository;
+    private final OptionValueRepository optionValueRepository;
 
     @RabbitListener(queues = RabbitMqConfig.QUEUE_ORDER_SYNC)
     @Transactional
@@ -51,7 +60,7 @@ public class OrderSyncConsumer {
                 .orderDate(message.orderDateTime() != null
                         ? message.orderDateTime().toLocalDate()
                         : null)
-                .waitingNum(null)
+                .waitingNum(message.waitingNum())
                 .totalPrice(message.totalPrice())
                 .orderStatus(message.orderState())
                 .build();
@@ -75,11 +84,27 @@ public class OrderSyncConsumer {
             // 옵션들
             if (detailDto.options() != null) {
                 for (OrderOptionSyncMessage optionDto : detailDto.options()) {
-                    OrderOption option = OrderOption.builder()
-                            .optionId(optionDto.optionId())
-                            .extraNum(optionDto.extraNum())
-                            .extraPrice(optionDto.extraPrice())
-                            .build();
+                        OptionGroup optionGroup = null;
+                        OptionValue optionValue = null;
+
+                        if (optionDto.groupId() != null) {
+                                optionGroup = optionGroupRepository.findById(optionDto.groupId())
+                                        .orElse(null);
+                        }
+
+                        if (optionDto.valueId() != null) {
+                                optionValue = optionValueRepository.findById(optionDto.valueId())
+                                        .orElse(null);
+                        }
+
+                        OrderOption option = OrderOption.builder()
+                                .orderDetail(detail)
+                                .optionId(optionDto.optionId())
+                                .optionGroup(optionGroup)
+                                .optionValue(optionValue)
+                                .extraNum(optionDto.extraNum())
+                                .extraPrice(optionDto.extraPrice())
+                                .build();
 
                     detail.addOrderOption(option);
                 }

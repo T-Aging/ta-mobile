@@ -140,24 +140,36 @@ public class OrderService {
             Menu menu = detail.getMenu();
             if (menu == null) continue;
 
-            totalQuantity += detail.getQuantity();
+            totalQuantity += detail.getQuantity() != null ? detail.getQuantity() : 0;
+
 
             List<OrderOption> options = orderOptionRepository.findByOrderDetailId(detail.getOrderDetailId());
             List<OrderDto.OptionItemDetail> optionDtos = options.stream()
                     .map(opt -> {
-                        MenuOption menuOption = null;
-                        if(opt.getOptionId() != null) {
-                             menuOption = menuOptionRepository.findById(opt.getOptionId()).orElse(null);
+                        OptionGroup group = opt.getOptionGroup();
+                        OptionValue value = opt.getOptionValue();
+
+                        String optionClass;
+                        String optionName;
+
+                        if (group != null && value != null) {
+                            optionClass = group.getName();
+                            optionName  = value.getName();
+                        } else {
+                            optionClass = "기타";
+                            optionName  = "알수없음";
                         }
+
+                        Integer optionIdForClient = opt.getOptionId();
                         return OrderDto.OptionItemDetail.builder()
-                                .optionId(opt.getOptionId())
-                                .optionClass(menuOption != null ? menuOption.getOptionClass() : "기타")
-                                .optionName(menuOption != null ? menuOption.getOptionDetail() : "알수없음")
+                                .optionId(optionIdForClient)
+                                .optionClass(optionClass)
+                                .optionName(optionName)
                                 .extraPrice(opt.getExtraPrice())
                                 .quantity(opt.getExtraNum())
                                 .build();
-                    })
-                    .collect(Collectors.toList());
+                        })
+                        .collect(Collectors.toList());
 
             itemDtos.add(OrderDto.OrderItemDetail.builder()
                     .menuId(menu.getMenuId())
