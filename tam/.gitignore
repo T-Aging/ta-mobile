@@ -36,8 +36,6 @@ out/
 .vscode/
 
 ### Secrets ###
-src/main/resources/application.properties
-*.yml
-data.sql
+.env
 
 settings.json
