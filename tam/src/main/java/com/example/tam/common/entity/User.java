@@ -23,7 +23,7 @@ public class User {
     @Column(name = "profile_image")
     private String profileImage;
 
-    @Column(name = "phone_number", unique = true)
+    @Column(name = "phone_number", unique = true, nullable = true)
     private String phoneNumber;
 
     @CreatedDate
